@@ -11,6 +11,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // File upload preview functionality
+    const attendeesFileInput = document.getElementById('attendees_file');
+    const filePreview = document.getElementById('file_preview');
+    const fileName = document.getElementById('file_name');
+
+    if (attendeesFileInput) {
+        attendeesFileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                fileName.textContent = file.name;
+                filePreview.classList.remove('d-none');
+                
+                // Validate file type
+                const allowedTypes = ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'];
+                const allowedExtensions = ['.xlsx', '.xls', '.csv'];
+                const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+                
+                if (!allowedExtensions.includes(fileExtension)) {
+                    filePreview.className = 'alert alert-danger';
+                    fileName.textContent = file.name + ' - Invalid file type! Please upload .xlsx, .xls, or .csv files only.';
+                } else {
+                    filePreview.className = 'alert alert-info';
+                }
+            } else {
+                filePreview.classList.add('d-none');
+            }
+        });
+    }
+
     // Venue is now free text, no dropdown handling needed
 
     // Online event toggle logic

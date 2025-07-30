@@ -261,20 +261,70 @@
             <!-- Attendees List Section -->
             <div class="row mb-4">
                 <div class="col-12">
-                    <h4 class="mb-3">Attendees List</h4>
+                    <h4 class="mb-3 text-primary">
+                        <i class="fas fa-users me-2"></i>Attendees List
+                        <span class="badge bg-danger ms-2">Required</span>
+                    </h4>
                 </div>
                 
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Attendees Excel File *</label>
-                        <div class="d-flex gap-2 mb-2">
-                            <a href="/api/download/attendees-template" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-download me-1"></i>Download Template
-                            </a>
-                            <input type="file" class="form-control" id="attendees_file" name="attendees_file" 
-                                   accept=".csv,.xlsx,.xls">
+                <div class="col-12">
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary bg-opacity-10">
+                            <h6 class="mb-0 text-primary">
+                                <i class="fas fa-file-excel me-2"></i>Upload Attendees File
+                            </h6>
                         </div>
-                        <small class="form-text text-muted">Download the Excel template, fill in previous attendee details (Name, Email), and upload here. Only .xlsx or .xls files are accepted.</small>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="attendees_file" class="form-label fw-bold">
+                                            Attendees Excel File 
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group mb-3">
+                                            <input type="file" class="form-control" id="attendees_file" name="attendees_file" 
+                                                   accept=".csv,.xlsx,.xls" required>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('attendees_file').value=''">
+                                                <i class="fas fa-times"></i> Clear
+                                            </button>
+                                        </div>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Upload a CSV or Excel file (.xlsx, .xls) containing attendee details including names, emails, and other relevant information.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-grid gap-2">
+                                        <a href="/api/download/attendees-template" class="btn btn-outline-primary">
+                                            <i class="fas fa-download me-2"></i>Download Template
+                                        </a>
+                                        <div class="text-center">
+                                            <small class="text-muted">
+                                                <i class="fas fa-lightbulb me-1"></i>
+                                                Use our template for proper formatting
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- File validation feedback -->
+                            <div class="mt-3">
+                                <div class="alert alert-info d-none" id="file_preview">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-file-excel fa-2x text-success me-3"></i>
+                                        <div>
+                                            <strong>File Selected:</strong>
+                                            <span id="file_name"></span>
+                                            <br>
+                                            <small class="text-muted">Click "Create Event" to process the attendees list</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

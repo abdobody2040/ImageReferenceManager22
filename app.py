@@ -102,6 +102,12 @@ class EventType(db.Model):
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+# Association table for many-to-many relationship between events and categories
+event_categories = db.Table('event_categories',
+    db.Column('event_id', db.Integer, db.ForeignKey('event.id'), primary_key=True),
+    db.Column('category_id', db.Integer, db.ForeignKey('event_category.id'), primary_key=True)
+)
+
 # Event model
 class Event(db.Model):
     __tablename__ = 'event'
@@ -113,6 +119,7 @@ class Event(db.Model):
     start_datetime = db.Column(db.DateTime, nullable=False)
     end_datetime = db.Column(db.DateTime)
     venue_id = db.Column(db.Integer, nullable=True)  # Could be linked to venue table later
+    venue_name = db.Column(db.String(200))
     governorate = db.Column(db.String(100))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(20), default='active')
@@ -121,10 +128,71 @@ class Event(db.Model):
     # Relationships
     event_type = db.relationship('EventType', backref='events')
     creator = db.relationship('User', backref='created_events')
+    categories = db.relationship('EventCategory', secondary=event_categories, backref='events')
 
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+def initialize_database():
+    """Initialize database with tables and default data"""
+    try:
+        # Create all tables
+        db.create_all()
+        
+        # Check if admin user exists
+        admin_user = User.query.filter_by(email='admin@test.com').first()
+        if not admin_user:
+            admin_user = User()
+            admin_user.email = 'admin@test.com'
+            admin_user.role = 'admin'
+            admin_user.set_password('admin123')
+            db.session.add(admin_user)
+            app.logger.info('Created default admin user: admin@test.com / admin123')
+        
+        # Initialize event categories
+        categories_data = [
+            'Cardiology', 'Oncology', 'Neurology', 'Pediatrics', 'Endocrinology',
+            'Dermatology', 'Psychiatry', 'Product Launch', 'Medical Education',
+            'Patient Awareness', 'Internal Training'
+        ]
+        
+        for cat_name in categories_data:
+            existing_cat = EventCategory.query.filter_by(name=cat_name).first()
+            if not existing_cat:
+                new_cat = EventCategory(name=cat_name)
+                db.session.add(new_cat)
+        
+        # Initialize event types
+        types_data = [
+            'Conference', 'Webinar', 'Workshop', 'Symposium', 
+            'Roundtable Meeting', 'Investigator Meeting'
+        ]
+        
+        for type_name in types_data:
+            existing_type = EventType.query.filter_by(name=type_name).first()
+            if not existing_type:
+                new_type = EventType(name=type_name)
+                db.session.add(new_type)
+        
+        # Initialize default app settings
+        if not AppSetting.query.filter_by(key='app_name').first():
+            AppSetting.set_setting('app_name', 'PharmaEvents')
+        
+        if not AppSetting.query.filter_by(key='theme_color').first():
+            AppSetting.set_setting('theme_color', '#0f6e84')
+        
+        db.session.commit()
+        app.logger.info('Database initialized successfully')
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error initializing database: {str(e)}')
+        raise
+
+# Initialize database
+with app.app_context():
+    initialize_database()
 
 # Routes
 @app.route('/')
@@ -229,9 +297,10 @@ def events():
         app.logger.error(f'Error fetching events: {str(e)}')
         events = []
     
+    app_logo = AppSetting.get_setting('app_logo')
     return render_template('events.html', 
                          app_name=app_name,
-                         app_logo=None,
+                         app_logo=app_logo,
                          theme_color=theme_color,
                          events=events, 
                          categories=categories,
@@ -274,18 +343,29 @@ def create_event():
             governorate = request.form.get('governorate', '').strip() if not is_online else None
             max_attendees = request.form.get('max_attendees')
             
-            # Handle attendees file upload
+            # Handle attendees file upload (now required)
             attendees_file = request.files.get('attendees_file')
             attendees_filename = None
             attendees_count = 0
+            
+            # Check if attendees file is provided (required)
+            if not attendees_file or not attendees_file.filename:
+                flash('Attendees list file is required. Please upload a CSV or Excel file with attendee details.', 'danger')
+                app_logo = AppSetting.get_setting('app_logo')
+                return render_template('create_event.html', 
+                                     app_name=app_name, app_logo=app_logo, theme_color=theme_color,
+                                     categories=categories, event_types=event_types, 
+                                     governorates=egyptian_governorates, edit_mode=False)
+            
             if attendees_file and attendees_file.filename:
                 # Validate file type (CSV, Excel)
                 allowed_extensions = {'csv', 'xlsx', 'xls'}
                 file_ext = attendees_file.filename.rsplit('.', 1)[1].lower() if '.' in attendees_file.filename else ''
                 if file_ext not in allowed_extensions:
                     flash('Attendees file must be CSV or Excel format', 'danger')
+                    app_logo = AppSetting.get_setting('app_logo')
                     return render_template('create_event.html', 
-                                         app_name=app_name, app_logo=None, theme_color=theme_color,
+                                         app_name=app_name, app_logo=app_logo, theme_color=theme_color,
                                          categories=categories, event_types=event_types, 
                                          governorates=egyptian_governorates, edit_mode=False)
                 
@@ -309,8 +389,9 @@ def create_event():
                     if df.empty:
                         flash('Attendees file appears to be empty', 'danger')
                         os.remove(file_path)  # Clean up the uploaded file
+                        app_logo = AppSetting.get_setting('app_logo')
                         return render_template('create_event.html', 
-                                             app_name=app_name, app_logo=None, theme_color=theme_color,
+                                             app_name=app_name, app_logo=app_logo, theme_color=theme_color,
                                              categories=categories, event_types=event_types, 
                                              governorates=egyptian_governorates, edit_mode=False)
                     
@@ -332,8 +413,9 @@ def create_event():
                     flash('Error processing attendees file. Please check the format and try again.', 'danger')
                     if os.path.exists(file_path):
                         os.remove(file_path)  # Clean up the uploaded file
+                    app_logo = AppSetting.get_setting('app_logo')
                     return render_template('create_event.html', 
-                                         app_name=app_name, app_logo=None, theme_color=theme_color,
+                                         app_name=app_name, app_logo=app_logo, theme_color=theme_color,
                                          categories=categories, event_types=event_types, 
                                          governorates=egyptian_governorates, edit_mode=False)
             
@@ -342,22 +424,25 @@ def create_event():
             
             if not title:
                 flash('Event title is required', 'danger')
+                app_logo = AppSetting.get_setting('app_logo')
                 return render_template('create_event.html', 
-                                     app_name=app_name, app_logo=None, theme_color=theme_color,
+                                     app_name=app_name, app_logo=app_logo, theme_color=theme_color,
                                      categories=categories, event_types=event_types, 
                                      governorates=egyptian_governorates, edit_mode=False)
             
             if not description:
                 flash('Event description is required', 'danger')
+                app_logo = AppSetting.get_setting('app_logo')
                 return render_template('create_event.html', 
-                                     app_name=app_name, app_logo=None, theme_color=theme_color,
+                                     app_name=app_name, app_logo=app_logo, theme_color=theme_color,
                                      categories=categories, event_types=event_types, 
                                      governorates=egyptian_governorates, edit_mode=False)
             
             if not start_date:
                 flash('Start date is required', 'danger')
+                app_logo = AppSetting.get_setting('app_logo')
                 return render_template('create_event.html', 
-                                     app_name=app_name, app_logo=None, theme_color=theme_color,
+                                     app_name=app_name, app_logo=app_logo, theme_color=theme_color,
                                      categories=categories, event_types=event_types, 
                                      governorates=egyptian_governorates, edit_mode=False)
             
@@ -396,16 +481,14 @@ def create_event():
             db.session.flush()  # Flush to get the ID
             event_id = new_event.id
             
-            # Handle category association if selected
+            # Handle category association if selected using SQLAlchemy ORM
             if category_id:
-                db.session.execute(db.text("""
-                    INSERT INTO event_categories (event_id, category_id) 
-                    VALUES (:event_id, :category_id)
-                    ON CONFLICT DO NOTHING
-                """), {
-                    'event_id': event_id,
-                    'category_id': int(category_id)
-                })
+                try:
+                    category = EventCategory.query.get(int(category_id))
+                    if category:
+                        new_event.categories.append(category)
+                except Exception as e:
+                    app.logger.error(f'Error associating category: {str(e)}')
             
             db.session.commit()
             
@@ -424,9 +507,10 @@ def create_event():
     
     # Use the global egyptian_governorates list
     
+    app_logo = AppSetting.get_setting('app_logo')
     return render_template('create_event.html', 
                          app_name=app_name,
-                         app_logo=None,
+                         app_logo=app_logo,
                          theme_color=theme_color,
                          categories=categories,
                          event_types=event_types,
@@ -459,9 +543,10 @@ def settings():
     # Get actual users from database
     users = [{'id': u.id, 'email': u.email, 'role': u.role} for u in User.query.all()]
     
+    app_logo = AppSetting.get_setting('app_logo')
     return render_template('settings.html',
                          app_name=app_name,
-                         app_logo=None,
+                         app_logo=app_logo,
                          theme_color=theme_color,
                          categories=categories,
                          event_types=event_types,
@@ -889,9 +974,43 @@ def uploaded_file(filename):
 @app.route('/api/settings/logo', methods=['POST'])
 @login_required
 def api_upload_logo():
-    from flask import jsonify, request
-    flash('Logo upload functionality will be implemented soon', 'info')
-    return jsonify({'success': True})
+    from flask import jsonify, request, make_response
+    try:
+        if 'logo' not in request.files:
+            return jsonify({'error': 'No logo file provided'}), 400
+        
+        logo_file = request.files['logo']
+        if logo_file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Validate file type
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'svg'}
+        file_ext = logo_file.filename.rsplit('.', 1)[1].lower() if '.' in logo_file.filename else ''
+        
+        if file_ext not in allowed_extensions:
+            return jsonify({'error': 'Invalid file type. Please upload PNG, JPG, JPEG, or SVG files only.'}), 400
+        
+        # Create uploads directory if it doesn't exist
+        upload_folder = os.path.join(app.static_folder or 'static', 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        # Generate unique filename
+        logo_filename = f"logo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{file_ext}"
+        logo_path = os.path.join(upload_folder, logo_filename)
+        
+        # Save the file
+        logo_file.save(logo_path)
+        
+        # Store logo path in settings
+        logo_url = f"/static/uploads/{logo_filename}"
+        AppSetting.set_setting('app_logo', logo_url)
+        
+        app.logger.info(f'Logo uploaded successfully: {logo_url}')
+        return jsonify({'success': True, 'logo_url': logo_url, 'message': 'Logo uploaded successfully!'})
+        
+    except Exception as e:
+        app.logger.error(f'Error uploading logo: {str(e)}')
+        return jsonify({'error': f'Failed to upload logo: {str(e)}'}), 500
 
 @app.route('/api/categories', methods=['POST'])
 @login_required
