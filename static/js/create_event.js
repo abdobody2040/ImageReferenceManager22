@@ -204,27 +204,12 @@ function validateEventForm() {
         isValid = false;
     }
 
-    // Validate deadline date
-    if (!deadlineDateVal || !deadlineTimeVal || isNaN(deadlineDateObj.getTime())) {
-        document.getElementById('deadline_date').classList.add('is-invalid');
-        document.getElementById('deadline_time').classList.add('is-invalid');
-        addErrorMessage(document.getElementById('deadline_date'), 'Please enter valid deadline date and time');
-        isValid = false;
-    }
-
     // Check date logic only if all dates are valid
     if (isValid) {
         // End date should be equal to or after start date
         if (endDateObj < startDateObj) {
             document.getElementById('end_date').classList.add('is-invalid');
             addErrorMessage(document.getElementById('end_date'), 'End date must be after or equal to start date');
-            isValid = false;
-        }
-        
-        // Deadline must be before start date
-        if (deadlineDateObj >= startDateObj) {
-            document.getElementById('deadline_date').classList.add('is-invalid');
-            addErrorMessage(document.getElementById('deadline_date'), 'Registration deadline must be before start date');
             isValid = false;
         }
     }

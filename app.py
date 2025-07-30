@@ -333,8 +333,17 @@ def create_event():
                                          governorates=egyptian_governorates, edit_mode=False)
             
             # Basic validation
+            app.logger.info(f'Form data received - Title: "{title}", Description: "{description}", Start Date: "{start_date}"')
+            
             if not title:
                 flash('Event title is required', 'danger')
+                return render_template('create_event.html', 
+                                     app_name=app_name, app_logo=None, theme_color=theme_color,
+                                     categories=categories, event_types=event_types, 
+                                     governorates=egyptian_governorates, edit_mode=False)
+            
+            if not description:
+                flash('Event description is required', 'danger')
                 return render_template('create_event.html', 
                                      app_name=app_name, app_logo=None, theme_color=theme_color,
                                      categories=categories, event_types=event_types, 
