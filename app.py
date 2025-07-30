@@ -599,11 +599,21 @@ def bulk_user_upload():
                 return render_template('bulk_user_upload.html', 
                                      app_name=app_name, theme_color=theme_color)
             
-            # Process users
+            # Process users in batches for better performance
             success_count = 0
             error_count = 0
             errors = []
+            batch_size = 50  # Process in batches of 50 users
             
+            # Pre-validate all data first
+            users_to_create = []
+            existing_emails = set()
+            
+            # Get all existing emails in one query for efficiency
+            existing_users = db.session.query(User.email).all()
+            existing_emails = {email[0].lower() for email in existing_users}
+            
+            # Validate all rows first
             for index, row in df.iterrows():
                 try:
                     email = str(row[email_col]).strip().lower() if email_col else ''
@@ -634,44 +644,60 @@ def bulk_user_upload():
                         continue
                     
                     # Check if user already exists
-                    existing_user = User.query.filter_by(email=email).first()
-                    if existing_user:
+                    if email in existing_emails:
                         errors.append(f'Row {index + 2}: User with email "{email}" already exists')
                         error_count += 1
                         continue
                     
-                    # Create new user
-                    new_user = User(
-                        email=email,
-                        role=normalized_role
-                    )
-                    new_user.set_password(user_password)
+                    # Add to existing emails to catch duplicates within the file
+                    if email in [u['email'] for u in users_to_create]:
+                        errors.append(f'Row {index + 2}: Duplicate email "{email}" in file')
+                        error_count += 1
+                        continue
                     
-                    # Use provided password or default
-                    password_to_use = user_password if user_password else 'PharmaEvents2024!'
-                    new_user.password_hash = generate_password_hash(password_to_use)
-                    
-                    db.session.add(new_user)
-                    success_count += 1
+                    users_to_create.append({
+                        'email': email,
+                        'role': normalized_role,
+                        'password': user_password
+                    })
                     
                 except Exception as e:
                     errors.append(f'Row {index + 2}: {str(e)}')
                     error_count += 1
             
-            # Commit all successful users
-            if success_count > 0:
-                db.session.commit()
-                flash(f'Successfully created {success_count} users', 'success')
-            
-            if error_count > 0:
-                flash(f'{error_count} errors occurred. Check details below.', 'warning')
-                for error in errors[:10]:  # Show first 10 errors
-                    flash(error, 'danger')
-                if len(errors) > 10:
-                    flash(f'... and {len(errors) - 10} more errors', 'info')
-            
-            if success_count == 0 and error_count > 0:
+            # Create users in batches
+            try:
+                for i in range(0, len(users_to_create), batch_size):
+                    batch = users_to_create[i:i + batch_size]
+                    
+                    for user_data in batch:
+                        new_user = User(
+                            email=user_data['email'],
+                            role=user_data['role']
+                        )
+                        new_user.set_password(user_data['password'])
+                        db.session.add(new_user)
+                        success_count += 1
+                    
+                    # Commit each batch
+                    db.session.commit()
+                    app.logger.info(f'Processed batch {i//batch_size + 1}, created {len(batch)} users')
+                
+                # Flash success/error messages
+                if success_count > 0:
+                    flash(f'Successfully created {success_count} users!', 'success')
+                
+                if error_count > 0:
+                    flash(f'Failed to create {error_count} users. See details below.', 'warning')
+                    for error in errors[:10]:  # Show first 10 errors
+                        flash(error, 'danger')
+                    if len(errors) > 10:
+                        flash(f'... and {len(errors) - 10} more errors', 'danger')
+                        
+            except Exception as e:
                 db.session.rollback()
+                app.logger.error(f'Error committing bulk user creation: {str(e)}')
+                flash(f'Database error: {str(e)}', 'danger')
             
         except Exception as e:
             db.session.rollback()
