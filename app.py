@@ -400,7 +400,7 @@ def create_event():
             if category_id:
                 db.session.execute(db.text("""
                     INSERT INTO event_categories (event_id, category_id) 
-                    VALUES (%(event_id)s, %(category_id)s)
+                    VALUES (:event_id, :category_id)
                     ON CONFLICT DO NOTHING
                 """), {
                     'event_id': event_id,
@@ -517,6 +517,7 @@ def download_users_template():
     sample_data = {
         'Full Name': ['Dr. Ahmed Hassan', 'Dr. Sarah Mohamed', 'Dr. Mohamed Ali'],
         'Email': ['ahmed.hassan@example.com', 'sarah.mohamed@example.com', 'mohamed.ali@example.com'],
+        'Password': ['SecurePass123!', 'MyPassword456#', 'AdminPass789$'],
         'Role': ['medical_rep', 'event_manager', 'admin'],
         'Department': ['Cardiology', 'Neurology', 'Administration'],
         'Phone': ['+20 123 456 7890', '+20 987 654 3210', '+20 555 123 4567'],
@@ -588,11 +589,13 @@ def bulk_user_upload():
             missing_columns = []
             if not email_col:
                 missing_columns.append('Email')
+            if not password_col:
+                missing_columns.append('Password')
             if not role_col:
                 missing_columns.append('Role')
             
             if missing_columns:
-                flash(f'Missing required columns: {", ".join(missing_columns)}', 'danger')
+                flash(f'Missing required columns: {", ".join(missing_columns)}. Please download the template and use the correct format.', 'danger')
                 return render_template('bulk_user_upload.html', 
                                      app_name=app_name, theme_color=theme_color)
             
@@ -608,8 +611,8 @@ def bulk_user_upload():
                     user_password = str(row[password_col]).strip() if password_col and pd.notna(row[password_col]) else None
                     
                     # Validate required fields
-                    if not email or not role:
-                        errors.append(f'Row {index + 2}: Missing required fields (Email or Role)')
+                    if not email or not role or not user_password:
+                        errors.append(f'Row {index + 2}: Missing required fields (Email, Password, or Role)')
                         error_count += 1
                         continue
                     
@@ -642,6 +645,7 @@ def bulk_user_upload():
                         email=email,
                         role=normalized_role
                     )
+                    new_user.set_password(user_password)
                     
                     # Use provided password or default
                     password_to_use = user_password if user_password else 'PharmaEvents2024!'
