@@ -258,6 +258,9 @@ def dashboard():
         # Get recent events (last 5)
         recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all()
         
+        # Get upcoming events list for dashboard display
+        upcoming_events_list = Event.query.filter(Event.start_datetime > datetime.now()).order_by(Event.start_datetime.asc()).limit(5).all()
+        
         # Get category data for charts
         category_stats = db.session.query(
             EventCategory.name, 
@@ -274,6 +277,7 @@ def dashboard():
         upcoming_events = 0
         pending_events_count = 0
         recent_events = []
+        upcoming_events_list = []
         category_data = []
     
     return render_template('dashboard.html', 
@@ -284,6 +288,7 @@ def dashboard():
                          upcoming_events=upcoming_events,
                          pending_events_count=pending_events_count,
                          recent_events=recent_events,
+                         upcoming_events_list=upcoming_events_list,
                          category_data=category_data)
 
 @app.route('/logout')

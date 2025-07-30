@@ -306,7 +306,7 @@
                                             </div>
                                         {% endif %}
                                     </div>
-                                    <a href="{{ url_for('event_details', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    <a href="{{ url_for('events') }}" class="btn btn-sm btn-outline-primary">View Events</a>
                                 </div>
                             </div>
                         {% endfor %}
@@ -347,8 +347,7 @@
                                         </p>
                                     </div>
                                     <div>
-                                        <a href="{{ url_for('event_details', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                        <a href="{{ url_for('edit_event', event_id=event.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                        <a href="{{ url_for('events') }}" class="btn btn-sm btn-outline-primary">View Events</a>
                                     </div>
                                 </div>
                             </div>
