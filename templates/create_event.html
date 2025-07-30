@@ -89,13 +89,14 @@
                     
                     <!-- Categories -->
                     <div class="mb-3">
-                        <label for="categories" class="form-label">Categories</label>
-                        <select class="form-select" id="categories" name="categories" multiple>
+                        <label for="categories" class="form-label">Category</label>
+                        <select class="form-select" id="categories" name="categories" required>
+                            <option value="">Select a category</option>
                             {% for category in categories %}
                             <option value="{{ category.id }}">{{ category.name }}</option>
                             {% endfor %}
                         </select>
-                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple categories</small>
+                        <small class="form-text text-muted">Select one category for this event</small>
                     </div>
                     
                     <!-- Online Event Checkbox -->

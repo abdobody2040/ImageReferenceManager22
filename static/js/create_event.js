@@ -214,10 +214,11 @@ function validateEventForm() {
         }
     }
 
-    // Check if at least one category is selected
+    // Check if a category is selected
     const categories = document.getElementById('categories');
-    if (categories && (!categories.value || categories.value.length === 0)) {
-        addErrorMessage(categories, 'Please select at least one category');
+    if (categories && !categories.value) {
+        categories.classList.add('is-invalid');
+        addErrorMessage(categories, 'Please select a category');
         isValid = false;
     }
 

@@ -31,6 +31,11 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 # Configure database - Use PostgreSQL if available, SQLite as fallback
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///pharmaevents.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+    "pool_reset_on_return": "commit"
+}
 
 # Initialize database
 db = SQLAlchemy(app)
@@ -259,7 +264,7 @@ def create_event():
             title = request.form.get('title', '').strip()
             description = request.form.get('description', '').strip()
             event_type_id = request.form.get('event_type')
-            category_ids = request.form.getlist('categories')
+            category_id = request.form.get('categories')
             start_date = request.form.get('start_date')
             end_date = request.form.get('end_date')
             start_time = request.form.get('start_time')
@@ -391,17 +396,16 @@ def create_event():
             db.session.flush()  # Flush to get the ID
             event_id = new_event.id
             
-            # Handle category associations if any
-            if category_ids:
-                for category_id in category_ids:
-                    db.session.execute(db.text("""
-                        INSERT INTO event_categories (event_id, category_id) 
-                        VALUES (%(event_id)s, %(category_id)s)
-                        ON CONFLICT DO NOTHING
-                    """), {
-                        'event_id': event_id,
-                        'category_id': int(category_id)
-                    })
+            # Handle category association if selected
+            if category_id:
+                db.session.execute(db.text("""
+                    INSERT INTO event_categories (event_id, category_id) 
+                    VALUES (%(event_id)s, %(category_id)s)
+                    ON CONFLICT DO NOTHING
+                """), {
+                    'event_id': event_id,
+                    'category_id': int(category_id)
+                })
             
             db.session.commit()
             
