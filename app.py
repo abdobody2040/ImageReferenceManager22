@@ -489,6 +489,7 @@ def create_event():
                 start_datetime=start_datetime,
                 end_datetime=end_datetime,
                 venue_id=None,  # We'll implement venue handling later
+                venue_name=request.form.get('venue', '').strip() if not is_online else None,
                 governorate=governorate,
                 user_id=current_user.id
             )

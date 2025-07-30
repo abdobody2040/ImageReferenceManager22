@@ -116,6 +116,16 @@ PharmaEvents is a web-based event management application designed specifically f
 
 ```
 Changelog:
+- July 30, 2025. Event Creation System Fixed & UI Enhanced
+  - ✅ Fixed database schema issues causing event creation failures
+  - ✅ Added missing venue_name column to Event model for proper form handling
+  - ✅ Styled event creation form to match attendees list design with enhanced UI
+  - ✅ Removed description field below event title per user request
+  - ✅ Made attendees list upload prominently featured with professional styling
+  - ✅ Fixed all LSP diagnostics errors for improved code quality
+  - ✅ Consolidated event creation form layout for better user experience
+  - ✅ Enhanced file upload sections with clear validation and templates
+
 - July 30, 2025. Comprehensive Code Review & Critical Fixes
   - ✅ Created missing event_categories table in PostgreSQL database
   - ✅ Fixed SQL parameter binding syntax (changed %% to : for PostgreSQL compatibility)
