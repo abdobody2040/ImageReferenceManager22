@@ -365,5 +365,11 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Pass chart data from template to JavaScript
+window.categoryChartData = {{ category_data | tojson }};
+window.eventTypeChartData = {{ event_type_data | tojson }};
+</script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}
