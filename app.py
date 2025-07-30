@@ -467,6 +467,101 @@ def settings():
                          event_types=event_types,
                          users=users)
 
+@app.route('/edit_event/<int:event_id>')
+@login_required
+def edit_event(event_id):
+    """Edit an existing event"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Check if user has permission to edit this event
+    if not current_user.is_admin() and event.user_id != current_user.id:
+        flash('You do not have permission to edit this event.', 'danger')
+        return redirect(url_for('events'))
+    
+    if request.method == 'POST':
+        # Handle form submission (similar to create_event)
+        pass
+    
+    # Get app settings
+    app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
+    theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
+    
+    # Get categories and event types from database
+    try:
+        categories_result = db.session.execute(db.text("SELECT id, name FROM event_category ORDER BY name"))
+        categories = [{'id': row[0], 'name': row[1]} for row in categories_result]
+    except Exception as e:
+        app.logger.error(f'Error fetching categories: {str(e)}')
+        categories = []
+    
+    try:
+        event_types_result = db.session.execute(db.text("SELECT id, name FROM event_type ORDER BY name"))
+        event_types = [{'id': row[0], 'name': row[1]} for row in event_types_result]
+    except Exception as e:
+        app.logger.error(f'Error fetching event types: {str(e)}')
+        event_types = []
+    
+    return render_template('create_event.html', 
+                         app_name=app_name,
+                         app_logo=None,
+                         theme_color=theme_color,
+                         categories=categories,
+                         event_types=event_types,
+                         governorates=egyptian_governorates,
+                         edit_mode=True,
+                         event=event)
+
+@app.route('/approve_event/<int:event_id>')
+@login_required
+def approve_event(event_id):
+    """Approve an event (admin only)"""
+    if not current_user.is_admin():
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('events'))
+    
+    event = Event.query.get_or_404(event_id)
+    event.status = 'approved'
+    db.session.commit()
+    
+    flash(f'Event "{event.name}" has been approved.', 'success')
+    return redirect(url_for('events'))
+
+@app.route('/reject_event/<int:event_id>')
+@login_required
+def reject_event(event_id):
+    """Reject an event (admin only)"""
+    if not current_user.is_admin():
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('events'))
+    
+    event = Event.query.get_or_404(event_id)
+    event.status = 'rejected'
+    db.session.commit()
+    
+    flash(f'Event "{event.name}" has been rejected.', 'success')
+    return redirect(url_for('events'))
+
+@app.route('/delete_event/<int:event_id>', methods=['POST'])
+@login_required
+def delete_event(event_id):
+    """Delete an event (admin only)"""
+    if not current_user.is_admin():
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('events'))
+    
+    event = Event.query.get_or_404(event_id)
+    event_name = event.name
+    
+    # Delete event-category associations first
+    db.session.execute(db.text("DELETE FROM event_categories WHERE event_id = :event_id"), {'event_id': event_id})
+    
+    # Delete the event
+    db.session.delete(event)
+    db.session.commit()
+    
+    flash(f'Event "{event_name}" has been deleted.', 'success')
+    return redirect(url_for('events'))
+
 @app.route('/export_events')
 @login_required
 def export_events():

@@ -231,11 +231,13 @@
                                 </a>
                                 
                                 {% if current_user.is_admin() %}
-                                    <button class="btn btn-sm btn-outline-danger btn-delete-event" 
-                                            data-event-id="{{ event.id }}"
-                                            data-event-name="{{ event.name }}">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
+                                    <form method="POST" action="{{ url_for('delete_event', event_id=event.id) }}" 
+                                          style="display: inline;" 
+                                          onsubmit="return confirm('Are you sure you want to delete event \'{{ event.name }}\'? This action cannot be undone.')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
                                 {% endif %}
                             </div>
                         </div>
