@@ -42,23 +42,21 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault();
             
             // Basic validation
+            const title = document.getElementById('title').value.trim();
             const description = document.getElementById('description').value.trim();
-            const requesterName = document.getElementById('requester_name').value.trim();
             const startDate = document.getElementById('start_date').value;
             const startTime = document.getElementById('start_time').value;
             const endDate = document.getElementById('end_date').value;
             const endTime = document.getElementById('end_time').value;
-            const deadlineDate = document.getElementById('deadline_date').value;
-            const deadlineTime = document.getElementById('deadline_time').value;
             
             // Check required fields
-            if (!startDate || !startTime || !endDate || !endTime || !deadlineDate || !deadlineTime) {
-                alert('All date and time fields are required');
+            if (!title) {
+                alert('Event title is required');
                 return false;
             }
 
-            if (!requesterName || requesterName.length < 4) {
-                alert('Requester name must be at least 4 characters long');
+            if (!startDate || !startTime || !endDate || !endTime) {
+                alert('All date and time fields are required');
                 return false;
             }
 
@@ -71,11 +69,10 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const startDateTime = new Date(`${startDate}T${startTime}:00`);
                 const endDateTime = new Date(`${endDate}T${endTime}:00`);
-                const deadlineDateTime = new Date(`${deadlineDate}T${deadlineTime}:00`);
                 const now = new Date();
 
                 // Check if dates are valid
-                if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime()) || isNaN(deadlineDateTime.getTime())) {
+                if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
                     alert('Invalid date or time format. Please use the date/time selectors.');
                     return false;
                 }
@@ -88,11 +85,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (endDateTime < startDateTime) {
                     alert('End date must be after or equal to start date');
-                    return false;
-                }
-
-                if (deadlineDateTime >= startDateTime) {
-                    alert('Registration deadline must be before the event start date');
                     return false;
                 }
             } catch (e) {
@@ -178,11 +170,9 @@ function validateEventForm() {
     const startTimeVal = document.getElementById('start_time').value;
     const endDateVal = document.getElementById('end_date').value;
     const endTimeVal = document.getElementById('end_time').value;
-    const deadlineDateVal = document.getElementById('deadline_date').value;
-    const deadlineTimeVal = document.getElementById('deadline_time').value;
     
     // Format for proper parsing
-    let startDateObj, endDateObj, deadlineDateObj;
+    let startDateObj, endDateObj;
     const now = new Date();
     
     try {
@@ -190,12 +180,10 @@ function validateEventForm() {
         // Format: yyyy-mm-dd hh:mm
         startDateObj = new Date(`${startDateVal} ${startTimeVal}`);
         endDateObj = new Date(`${endDateVal} ${endTimeVal}`);
-        deadlineDateObj = new Date(`${deadlineDateVal} ${deadlineTimeVal}`);
         
         // Debug info to console
         console.log('Start Date:', startDateVal, startTimeVal, startDateObj);
         console.log('End Date:', endDateVal, endTimeVal, endDateObj);
-        console.log('Deadline:', deadlineDateVal, deadlineTimeVal, deadlineDateObj);
     } catch (e) {
         console.error('Date parsing error:', e);
     }

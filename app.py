@@ -11,6 +11,15 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+# Egyptian governorates list
+egyptian_governorates = [
+    'Cairo', 'Giza', 'Alexandria', 'Dakahlia', 'Red Sea', 'Beheira', 'Fayoum',
+    'Gharbiya', 'Ismailia', 'Menofia', 'Minya', 'Qaliubiya', 'New Valley',
+    'Suez', 'Aswan', 'Assiut', 'Beni Suef', 'Port Said', 'Damietta',
+    'Sharkia', 'South Sinai', 'Kafr El Sheikh', 'Matrouh', 'Luxor',
+    'Qena', 'North Sinai', 'Sohag'
+]
+
 # Create app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "pharmaevents_secret_key")
@@ -276,8 +285,7 @@ def create_event():
                                          governorates=egyptian_governorates, edit_mode=False)
                 
                 # Save the file
-                import os
-                upload_folder = os.path.join(app.static_folder, 'uploads', 'attendees')
+                upload_folder = os.path.join(app.static_folder or 'static', 'uploads', 'attendees')
                 os.makedirs(upload_folder, exist_ok=True)
                 attendees_filename = f"attendees_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{attendees_file.filename}"
                 file_path = os.path.join(upload_folder, attendees_filename)
@@ -339,17 +347,9 @@ def create_event():
                                      categories=categories, event_types=event_types, 
                                      governorates=egyptian_governorates, edit_mode=False)
             
-            # Insert event into database
-            insert_query = """
-                INSERT INTO event (name, description, event_type_id, is_online, start_datetime, end_datetime, 
-                                 venue_id, governorate, user_id, status, created_at)
-                VALUES (%(title)s, %(description)s, %(event_type_id)s, %(is_online)s, %(start_datetime)s, 
-                        %(end_datetime)s, %(venue_id)s, %(governorate)s, %(user_id)s, 'active', NOW())
-                RETURNING id
-            """
+            # Now using SQLAlchemy ORM for event creation
             
             # Combine date and time for datetime fields
-            from datetime import datetime
             start_datetime = None
             end_datetime = None
             
@@ -365,20 +365,22 @@ def create_event():
                 else:
                     end_datetime = datetime.strptime(end_date, "%Y-%m-%d")
             
-            # Execute the insert
-            result = db.session.execute(db.text(insert_query), {
-                'title': title,
-                'description': description,
-                'event_type_id': int(event_type_id) if event_type_id else None,
-                'is_online': is_online,
-                'start_datetime': start_datetime,
-                'end_datetime': end_datetime,
-                'venue_id': None,  # We'll implement venue handling later
-                'governorate': governorate,
-                'user_id': current_user.id
-            })
+            # Create new event using SQLAlchemy ORM instead of raw SQL
+            new_event = Event(
+                name=title,
+                description=description,
+                event_type_id=int(event_type_id) if event_type_id else None,
+                is_online=is_online,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                venue_id=None,  # We'll implement venue handling later
+                governorate=governorate,
+                user_id=current_user.id
+            )
             
-            event_id = result.fetchone()[0]
+            db.session.add(new_event)
+            db.session.flush()  # Flush to get the ID
+            event_id = new_event.id
             
             # Handle category associations if any
             if category_ids:
