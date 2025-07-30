@@ -9,3 +9,8 @@ pillow==9.5.0
 werkzeug==2.3.6
 openpyxl
 pandas
+email_validator
+flask
+flask-sqlalchemy
+gunicorn
+psycopg2-binary
