@@ -22,7 +22,7 @@ egyptian_governorates = [
 
 # Create app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "pharmaevents_secret_key")
+app.secret_key = os.environ.get("SESSION_SECRET")
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -617,7 +617,7 @@ def download_users_template():
     
     # Create Excel file in memory
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+    with pd.ExcelWriter(output, engine='openpyxl', mode='w') as writer:
         df.to_excel(writer, index=False, sheet_name='Users')
     output.seek(0)
     
@@ -706,13 +706,14 @@ def bulk_user_upload():
             # Validate all rows first
             for index, row in df.iterrows():
                 try:
-                    email = str(row[email_col]).strip().lower() if email_col else ''
-                    role = str(row[role_col]).strip().lower() if role_col else ''
-                    user_password = str(row[password_col]).strip() if password_col and not pd.isna(row[password_col]) else None
+                    row_num = int(index) if isinstance(index, (int, float)) else 0
+                    email = str(row[email_col]).strip().lower() if email_col and email_col in row and not pd.isna(row[email_col]) else ''
+                    role = str(row[role_col]).strip().lower() if role_col and role_col in row and not pd.isna(row[role_col]) else ''
+                    user_password = str(row[password_col]).strip() if password_col and password_col in row and not pd.isna(row[password_col]) else None
                     
                     # Validate required fields
                     if not email or not role or not user_password:
-                        errors.append(f'Row {str(index + 2)}: Missing required fields (Email, Password, or Role)')
+                        errors.append(f'Row {row_num + 2}: Missing required fields (Email, Password, or Role)')
                         error_count += 1
                         continue
                     
@@ -729,19 +730,19 @@ def bulk_user_upload():
                     valid_roles = ['admin', 'event_manager', 'medical_rep']
                     
                     if normalized_role not in valid_roles:
-                        errors.append(f'Row {str(index + 2)}: Invalid role "{role}". Must be one of: admin, event_manager, medical_rep')
+                        errors.append(f'Row {row_num + 2}: Invalid role "{role}". Must be one of: admin, event_manager, medical_rep')
                         error_count += 1
                         continue
                     
                     # Check if user already exists
                     if email in existing_emails:
-                        errors.append(f'Row {str(index + 2)}: User with email "{email}" already exists')
+                        errors.append(f'Row {row_num + 2}: User with email "{email}" already exists')
                         error_count += 1
                         continue
                     
                     # Add to existing emails to catch duplicates within the file
                     if email in [u['email'] for u in users_to_create]:
-                        errors.append(f'Row {str(index + 2)}: Duplicate email "{email}" in file')
+                        errors.append(f'Row {row_num + 2}: Duplicate email "{email}" in file')
                         error_count += 1
                         continue
                     
@@ -752,7 +753,8 @@ def bulk_user_upload():
                     })
                     
                 except Exception as e:
-                    errors.append(f'Row {str(index + 2)}: {str(e)}')
+                    row_num = int(index) if isinstance(index, (int, float)) else 0
+                    errors.append(f'Row {row_num + 2}: {str(e)}')
                     error_count += 1
             
             # Create users in batches
