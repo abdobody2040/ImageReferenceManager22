@@ -422,13 +422,7 @@ def create_event():
             app.logger.error(f'Error creating event: {str(e)}')
             flash('Error creating event. Please try again.', 'danger')
     
-    # Egyptian governorates list
-    egyptian_governorates = [
-        'Cairo', 'Giza', 'Alexandria', 'Dakahlia', 'Red Sea', 'Beheira', 'Fayoum', 'Gharbiya',
-        'Ismailia', 'Menofia', 'Minya', 'Qaliubiya', 'New Valley', 'Suez', 'Aswan', 'Assiut',
-        'Beni Suef', 'Port Said', 'Damietta', 'Sharkia', 'South Sinai', 'Kafr El Sheikh',
-        'Matrouh', 'Luxor', 'Qena', 'North Sinai', 'Sohag'
-    ]
+    # Use the global egyptian_governorates list
     
     return render_template('create_event.html', 
                          app_name=app_name,
@@ -528,7 +522,8 @@ def download_users_template():
     
     # Create Excel file in memory
     output = io.BytesIO()
-    df.to_excel(output, index=False, sheet_name='Users')
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Users')
     output.seek(0)
     
     # Create response
@@ -618,11 +613,11 @@ def bulk_user_upload():
                 try:
                     email = str(row[email_col]).strip().lower() if email_col else ''
                     role = str(row[role_col]).strip().lower() if role_col else ''
-                    user_password = str(row[password_col]).strip() if password_col and pd.notna(row[password_col]) else None
+                    user_password = str(row[password_col]).strip() if password_col and not pd.isna(row[password_col]) else None
                     
                     # Validate required fields
                     if not email or not role or not user_password:
-                        errors.append(f'Row {index + 2}: Missing required fields (Email, Password, or Role)')
+                        errors.append(f'Row {str(index + 2)}: Missing required fields (Email, Password, or Role)')
                         error_count += 1
                         continue
                     
@@ -639,19 +634,19 @@ def bulk_user_upload():
                     valid_roles = ['admin', 'event_manager', 'medical_rep']
                     
                     if normalized_role not in valid_roles:
-                        errors.append(f'Row {index + 2}: Invalid role "{role}". Must be one of: admin, event_manager, medical_rep')
+                        errors.append(f'Row {str(index + 2)}: Invalid role "{role}". Must be one of: admin, event_manager, medical_rep')
                         error_count += 1
                         continue
                     
                     # Check if user already exists
                     if email in existing_emails:
-                        errors.append(f'Row {index + 2}: User with email "{email}" already exists')
+                        errors.append(f'Row {str(index + 2)}: User with email "{email}" already exists')
                         error_count += 1
                         continue
                     
                     # Add to existing emails to catch duplicates within the file
                     if email in [u['email'] for u in users_to_create]:
-                        errors.append(f'Row {index + 2}: Duplicate email "{email}" in file')
+                        errors.append(f'Row {str(index + 2)}: Duplicate email "{email}" in file')
                         error_count += 1
                         continue
                     
@@ -662,7 +657,7 @@ def bulk_user_upload():
                     })
                     
                 except Exception as e:
-                    errors.append(f'Row {index + 2}: {str(e)}')
+                    errors.append(f'Row {str(index + 2)}: {str(e)}')
                     error_count += 1
             
             # Create users in batches
@@ -671,10 +666,9 @@ def bulk_user_upload():
                     batch = users_to_create[i:i + batch_size]
                     
                     for user_data in batch:
-                        new_user = User(
-                            email=user_data['email'],
-                            role=user_data['role']
-                        )
+                        new_user = User()
+                        new_user.email = user_data['email']
+                        new_user.role = user_data['role']
                         new_user.set_password(user_data['password'])
                         db.session.add(new_user)
                         success_count += 1
@@ -879,6 +873,19 @@ def forgot_password():
 with app.app_context():
     # Create upload directory
     os.makedirs('static/uploads', exist_ok=True)
+    
+    # Create all database tables
+    db.create_all()
+    
+    # Create a default admin user if none exists
+    if not User.query.filter_by(email='admin@test.com').first():
+        admin_user = User()
+        admin_user.email = 'admin@test.com'
+        admin_user.role = 'admin'
+        admin_user.set_password('admin123')
+        db.session.add(admin_user)
+        db.session.commit()
+        app.logger.info('Default admin user created: admin@test.com / admin123')
     
     db.create_all()
     
