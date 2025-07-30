@@ -241,36 +241,7 @@
                     </div>
                 </div>
                 
-                <!-- Event Categories -->
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label for="categories" class="form-label">Event Categories *</label>
-                        <select class="form-select" id="categories" name="categories" multiple>
-                            {% for category in categories %}
-                                <option value="{{ category.id }}" 
-                                        {% if event and category in event.categories %}selected{% endif %}>
-                                    {{ category.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <small class="form-text text-muted">Select one or more relevant categories for the event</small>
-                    </div>
-                </div>
-                
-                <!-- Event Type -->
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label for="event_type" class="form-label">Event Type *</label>
-                        <select class="form-select" id="event_type" name="event_type" required>
-                            <option value="">Select an event type</option>
-                            {% for type in event_types %}
-                                <option value="{{ type.id }}" {% if event and event.event_type_id == type.id %}selected{% endif %}>
-                                    {{ type.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
+
                 
                 <!-- Event Description -->
                 <div class="col-12">

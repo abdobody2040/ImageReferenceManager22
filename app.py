@@ -72,6 +72,42 @@ class AppSetting(db.Model):
         db.session.commit()
         return setting
 
+# Event Category model
+class EventCategory(db.Model):
+    __tablename__ = 'event_category'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# Event Type model
+class EventType(db.Model):
+    __tablename__ = 'event_type'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# Event model
+class Event(db.Model):
+    __tablename__ = 'event'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    event_type_id = db.Column(db.Integer, db.ForeignKey('event_type.id'))
+    is_online = db.Column(db.Boolean, default=False)
+    start_datetime = db.Column(db.DateTime, nullable=False)
+    end_datetime = db.Column(db.DateTime)
+    venue_id = db.Column(db.Integer, nullable=True)  # Could be linked to venue table later
+    governorate = db.Column(db.String(100))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(20), default='active')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    event_type = db.relationship('EventType', backref='events')
+    creator = db.relationship('User', backref='created_events')
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
@@ -139,16 +175,14 @@ def events():
     
     # Get categories from database
     try:
-        categories_result = db.session.execute(db.text("SELECT id, name FROM event_category ORDER BY name"))
-        categories = [{'id': row[0], 'name': row[1]} for row in categories_result]
+        categories = EventCategory.query.order_by(EventCategory.name).all()
     except Exception as e:
         app.logger.error(f'Error fetching categories: {str(e)}')
         categories = []
     
     # Get event types from database
     try:
-        event_types_result = db.session.execute(db.text("SELECT id, name FROM event_type ORDER BY name"))
-        event_types = [{'id': row[0], 'name': row[1]} for row in event_types_result]
+        event_types = EventType.query.order_by(EventType.name).all()
     except Exception as e:
         app.logger.error(f'Error fetching event types: {str(e)}')
         event_types = []
@@ -197,16 +231,14 @@ def create_event():
     
     # Get categories from database
     try:
-        categories_result = db.session.execute(db.text("SELECT id, name FROM event_category ORDER BY name"))
-        categories = [{'id': row[0], 'name': row[1]} for row in categories_result]
+        categories = EventCategory.query.order_by(EventCategory.name).all()
     except Exception as e:
         app.logger.error(f'Error fetching categories: {str(e)}')
         categories = []
     
     # Get event types from database
     try:
-        event_types_result = db.session.execute(db.text("SELECT id, name FROM event_type ORDER BY name"))
-        event_types = [{'id': row[0], 'name': row[1]} for row in event_types_result]
+        event_types = EventType.query.order_by(EventType.name).all()
     except Exception as e:
         app.logger.error(f'Error fetching event types: {str(e)}')
         event_types = []
@@ -804,6 +836,8 @@ with app.app_context():
     os.makedirs('static/uploads', exist_ok=True)
     
     db.create_all()
+    
+    # Create admin user if it doesn't exist
     if not User.query.filter_by(email='admin@test.com').first():
         admin = User()
         admin.email = 'admin@test.com'
@@ -812,6 +846,31 @@ with app.app_context():
         db.session.add(admin)
         db.session.commit()
         print("Admin user created: admin@test.com / admin123")
+    
+    # Create event categories if they don't exist
+    categories = [
+        'Cardiology', 'Oncology', 'Neurology', 'Pediatrics', 'Endocrinology',
+        'Dermatology', 'Psychiatry', 'Product Launch', 'Medical Education',
+        'Patient Awareness', 'Internal Training'
+    ]
+    
+    for cat_name in categories:
+        if not EventCategory.query.filter_by(name=cat_name).first():
+            category = EventCategory(name=cat_name)
+            db.session.add(category)
+    
+    # Create event types if they don't exist
+    event_types = [
+        'Conference', 'Webinar', 'Workshop', 'Symposium', 
+        'Roundtable Meeting', 'Investigator Meeting'
+    ]
+    
+    for type_name in event_types:
+        if not EventType.query.filter_by(name=type_name).first():
+            event_type = EventType(name=type_name)
+            db.session.add(event_type)
+    
+    db.session.commit()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=4000, debug=True)
