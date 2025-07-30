@@ -119,7 +119,7 @@ class Event(db.Model):
     start_datetime = db.Column(db.DateTime, nullable=False)
     end_datetime = db.Column(db.DateTime)
     venue_id = db.Column(db.Integer, nullable=True)  # Could be linked to venue table later
-    venue_name = db.Column(db.String(200))
+
     governorate = db.Column(db.String(100))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(20), default='active')
@@ -364,6 +364,15 @@ def create_event():
             attendees_filename = None
             attendees_count = 0
             
+            # Handle attendees file upload if provided
+            if 'attendees_file' in request.files:
+                attendees_file = request.files['attendees_file']
+                if attendees_file and attendees_file.filename:
+                    # Basic file processing - just count for now
+                    if attendees_file.filename.endswith(('.csv', '.xlsx', '.xls')):
+                        attendees_count = 1  # Placeholder - actual processing would count rows
+                        app.logger.info(f'Attendees file uploaded: {attendees_file.filename}')
+            
             # Check if attendees file is provided (required)
             if not attendees_file or not attendees_file.filename:
                 flash('Attendees list file is required. Please upload a CSV or Excel file with attendee details.', 'danger')
@@ -489,7 +498,7 @@ def create_event():
                 start_datetime=start_datetime,
                 end_datetime=end_datetime,
                 venue_id=None,  # We'll implement venue handling later
-                venue_name=request.form.get('venue', '').strip() if not is_online else None,
+
                 governorate=governorate,
                 user_id=current_user.id
             )
