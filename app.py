@@ -249,15 +249,42 @@ def dashboard():
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
     
+    # Calculate real dashboard statistics
+    try:
+        total_events = Event.query.count()
+        upcoming_events = Event.query.filter(Event.start_datetime > datetime.now()).count()
+        pending_events_count = Event.query.filter(Event.status == 'pending').count()
+        
+        # Get recent events (last 5)
+        recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all()
+        
+        # Get category data for charts
+        category_stats = db.session.query(
+            EventCategory.name, 
+            db.func.count(Event.id).label('count')
+        ).join(
+            Event.categories
+        ).group_by(EventCategory.name).all()
+        
+        category_data = [{'name': stat[0], 'count': stat[1]} for stat in category_stats]
+        
+    except Exception as e:
+        app.logger.error(f'Error calculating dashboard stats: {str(e)}')
+        total_events = 0
+        upcoming_events = 0
+        pending_events_count = 0
+        recent_events = []
+        category_data = []
+    
     return render_template('dashboard.html', 
                          app_name=app_name,
                          app_logo=None,
                          theme_color=theme_color,
-                         total_events=0,
-                         upcoming_events=0,
-                         pending_events_count=0,
-                         recent_events=[],
-                         category_data=[])
+                         total_events=total_events,
+                         upcoming_events=upcoming_events,
+                         pending_events_count=pending_events_count,
+                         recent_events=recent_events,
+                         category_data=category_data)
 
 @app.route('/logout')
 @login_required
@@ -285,30 +312,9 @@ def events():
         app.logger.error(f'Error fetching event types: {str(e)}')
         event_types = []
     
-    # Get events from database
+    # Get events from database using ORM
     try:
-        events_query = """
-            SELECT e.id, e.name, e.description, e.is_online, e.start_datetime, e.end_datetime, 
-                   e.status, et.name as event_type_name, u.email as creator_email
-            FROM event e
-            LEFT JOIN event_type et ON e.event_type_id = et.id
-            LEFT JOIN users u ON e.user_id = u.id
-            ORDER BY e.start_datetime DESC
-        """
-        events_result = db.session.execute(db.text(events_query))
-        events = []
-        for row in events_result:
-            events.append({
-                'id': row[0],
-                'name': row[1],
-                'description': row[2],
-                'is_online': row[3],
-                'start_datetime': row[4],
-                'end_datetime': row[5],
-                'status': row[6],
-                'event_type_name': row[7],
-                'creator_email': row[8]
-            })
+        events = Event.query.order_by(Event.start_datetime.desc()).all()
     except Exception as e:
         app.logger.error(f'Error fetching events: {str(e)}')
         events = []
