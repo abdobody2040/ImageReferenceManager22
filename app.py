@@ -190,9 +190,25 @@ def initialize_database():
         app.logger.error(f'Error initializing database: {str(e)}')
         raise
 
-# Initialize database
-with app.app_context():
-    initialize_database()
+# Initialize database only if needed
+def init_db_if_needed():
+    """Initialize database only if it's empty"""
+    try:
+        with app.app_context():
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            table_names = inspector.get_table_names()
+            
+            if not table_names:
+                app.logger.info('Database is empty, initializing...')
+                initialize_database()
+            else:
+                app.logger.info(f'Database already initialized with tables: {table_names}')
+    except Exception as e:
+        app.logger.error(f'Error checking database: {str(e)}')
+
+# Call initialization
+init_db_if_needed()
 
 # Routes
 @app.route('/')
@@ -702,8 +718,9 @@ def download_users_template():
     
     # Create Excel file in memory
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl', mode='w') as writer:
-        df.to_excel(writer, index=False, sheet_name='Users')
+    writer = pd.ExcelWriter(output, engine='openpyxl')
+    df.to_excel(writer, index=False, sheet_name='Users')
+    writer.close()
     output.seek(0)
     
     # Create response
@@ -792,9 +809,9 @@ def bulk_user_upload():
             for index, row in df.iterrows():
                 try:
                     row_num = int(index) if isinstance(index, (int, float)) else 0
-                    email = str(row[email_col]).strip().lower() if email_col and email_col in row and not pd.isna(row[email_col]) else ''
-                    role = str(row[role_col]).strip().lower() if role_col and role_col in row and not pd.isna(row[role_col]) else ''
-                    user_password = str(row[password_col]).strip() if password_col and password_col in row and not pd.isna(row[password_col]) else None
+                    email = str(row[email_col]).strip().lower() if email_col and email_col in row and pd.notna(row[email_col]) else ''
+                    role = str(row[role_col]).strip().lower() if role_col and role_col in row and pd.notna(row[role_col]) else ''
+                    user_password = str(row[password_col]).strip() if password_col and password_col in row and pd.notna(row[password_col]) else None
                     
                     # Validate required fields
                     if not email or not role or not user_password:
@@ -985,7 +1002,10 @@ def api_upload_logo():
         
         # Validate file type
         allowed_extensions = {'png', 'jpg', 'jpeg', 'svg'}
-        file_ext = logo_file.filename.rsplit('.', 1)[1].lower() if '.' in logo_file.filename else ''
+        if logo_file.filename and '.' in logo_file.filename:
+            file_ext = logo_file.filename.rsplit('.', 1)[1].lower()
+        else:
+            file_ext = ''
         
         if file_ext not in allowed_extensions:
             return jsonify({'error': 'Invalid file type. Please upload PNG, JPG, JPEG, or SVG files only.'}), 400
