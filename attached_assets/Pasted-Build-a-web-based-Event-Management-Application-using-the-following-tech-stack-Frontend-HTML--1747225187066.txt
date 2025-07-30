@@ -1,0 +1,78 @@
+Build a web-based Event Management Application using the following tech stack:
+
+Frontend:
+- HTML/CSS for structure and styling
+- Vanilla JavaScript for interactivity
+
+Backend:
+- PHP for server-side logic
+- MySQL as the database
+
+Hosting:
+- Target: cPanel Shared Hosting
+- Use PHP Sessions for authentication
+- Use FTP or cPanel File Manager for uploads
+
+Requirements:
+
+1. **Login Page**
+   - Title: “PharmaEvents – Secure & Compliant Event Management for Pharma”
+   - Fields: Email, Password
+   - Features: Forgot password link, PHP session-based login
+   - Roles: Admin, Event Manager
+   - Security: Validate credentials against MySQL, hash passwords
+
+2. **Dashboard**
+   - Navigation: Dashboard, Events, Create Event, Settings
+   - Show a list of created events with filters for:
+     - Date
+     - Category
+     - Type
+   - Include “Create New Event” button
+
+3. **Create New Event Page**
+   - Fields:
+     - Event Name
+     - Requester Name
+     - Online Event (checkbox)
+     - Event Banner (image URL or file upload)
+     - Start/End Date & Time
+     - Registration Deadline (Date + Time)
+     - Governorate (Egypt dropdown)
+     - Venue (dropdown, optional)
+     - Service Request ID (dropdown)
+     - Employee Code (dropdown)
+     - Categories (multi-select)
+     - Event Type (dropdown)
+     - Description (text area, support basic markdown)
+   - Save data to MySQL
+   - Handle banner upload and file storage (max 2MB, JPG/PNG)
+
+4. **Events Listing Page**
+   - Display cards for each event:
+     - Event Name, Type, Dates, Location
+     - Categories as tags
+     - Online/Offline label
+     - Thumbnail/banner image
+     - “View Details”, “Edit”, and “Delete” buttons
+   - Filters: Search, Date, Category, Type
+
+5. **Admin Features**
+   - Add/Edit/Delete events
+   - Role-based access (only Admins can delete)
+   - Secure session management (logout, session timeout)
+
+6. **MySQL Schema**
+   - Tables:
+     - `users` (id, email, password, role)
+     - `events` (id, name, requester, is_online, image_url, image_file, start_datetime, end_datetime, deadline_date, deadline_time, governorate, venue, service_request_id, employee_code, categories, type, description, created_at)
+   - Use foreign keys where appropriate
+
+7. **UI**
+   - Clean UI, mobile-friendly
+   - Use cards for events
+   - Mark events as Online or Offline with badges
+
+Please write modular, well-documented PHP files. Use includes/partials for layout (e.g., header.php, footer.php, db.php). All input fields must be validated server-side.
+
+Final project must be deployable on cPanel shared hosting.
