@@ -202,12 +202,16 @@
             <div class="mt-4">
                 <h5 class="mb-3">Admin Actions</h5>
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for('approve_event', event_id=event.id) }}" class="btn btn-success">
-                        <i class="fas fa-check me-1"></i> Approve Event
-                    </a>
-                    <a href="{{ url_for('reject_event', event_id=event.id) }}" class="btn btn-danger">
-                        <i class="fas fa-times me-1"></i> Reject Event
-                    </a>
+                    <form method="POST" action="{{ url_for('approve_event', event_id=event.id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to approve this event?')">
+                            <i class="fas fa-check me-1"></i> Approve Event
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('reject_event', event_id=event.id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to reject this event?')">
+                            <i class="fas fa-times me-1"></i> Reject Event
+                        </button>
+                    </form>
                 </div>
             </div>
             {% endif %}

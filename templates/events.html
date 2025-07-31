@@ -7,26 +7,26 @@
     .event-card {
         height: 100%;
     }
-    
+
     .event-banner {
         position: relative;
         height: 200px;
         overflow: hidden;
     }
-    
+
     .event-banner img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
-    
+
     .event-badge {
         position: absolute;
         top: 10px;
         right: 10px;
         z-index: 10;
     }
-    
+
     .card-category {
         display: inline-block;
         margin-right: 0.25rem;
@@ -37,18 +37,18 @@
         border-radius: 0.25rem;
         font-size: 0.75rem;
     }
-    
+
     .event-info {
         font-size: 0.875rem;
         margin-bottom: 0.5rem;
     }
-    
+
     .event-info i {
         width: 1rem;
         text-align: center;
         margin-right: 0.5rem;
     }
-    
+
     .filters-container {
         background-color: #f8f9fa;
         border-radius: 0.5rem;
@@ -83,7 +83,7 @@
                     <input type="text" class="form-control" id="search_input" name="search" placeholder="Search events..." value="{{ search_query or '' }}">
                 </div>
             </div>
-            
+
             <div class="col-md-6 col-lg-3">
                 <select class="form-select filter-control" id="category_filter" name="category">
                     <option value="all">All Categories</option>
@@ -94,7 +94,7 @@
                     {% endfor %}
                 </select>
             </div>
-            
+
             <div class="col-md-6 col-lg-3">
                 <select class="form-select filter-control" id="type_filter" name="type">
                     <option value="all">All Types</option>
@@ -105,7 +105,7 @@
                     {% endfor %}
                 </select>
             </div>
-            
+
             <div class="col-md-6 col-lg-3">
                 <select class="form-select filter-control" id="date_filter" name="date">
                     <option value="all" {% if selected_date == 'all' %}selected{% endif %}>All Dates</option>
@@ -113,7 +113,7 @@
                     <option value="past" {% if selected_date == 'past' %}selected{% endif %}>Past</option>
                 </select>
             </div>
-            
+
             {% if current_user.can_approve_events() %}
             <div class="col-md-6 col-lg-3">
                 <select class="form-select filter-control" id="status_filter" name="status">
@@ -138,7 +138,7 @@
                         <span class="badge event-badge {% if event.is_online %}bg-info{% else %}bg-success{% endif %}">
                             {{ event.status if event.status else 'Active' }}
                         </span>
-                        
+
                         <!-- Approval status badge -->
                         {% if event.status == 'pending' %}
                             <span class="badge bg-warning position-absolute" style="right: 10px; top: 10px;">
@@ -153,7 +153,7 @@
                                 <i class="fas fa-check-circle me-1"></i> Active
                             </span>
                         {% endif %}
-                        
+
                         {% if event.image_file %}
                             <img src="{{ url_for('uploaded_file', filename=event.image_file) }}" alt="{{ event.name }}">
                         {% elif event.image_url %}
@@ -164,17 +164,17 @@
                             </div>
                         {% endif %}
                     </div>
-                    
+
                     <div class="card-body">
                         <h5 class="card-title text-truncate">{{ event.name }}</h5>
-                        
+
                         <div class="mb-2">
                             <span class="badge bg-light text-dark">
                                 <i class="fas {% if event.event_type %}fa-tag{% else %}fa-question-circle{% endif %} me-1"></i>
                                 {% if event.event_type %}{{ event.event_type.name }}{% else %}Unspecified{% endif %}
                             </span>
                         </div>
-                        
+
                         <div class="event-info">
                             <i class="far fa-calendar-alt text-muted"></i>
                             {{ event.start_datetime.strftime('%b %d, %Y %I:%M %p') }}
@@ -184,7 +184,7 @@
                                 - {{ event.end_datetime.strftime('%I:%M %p') }}
                             {% endif %}
                         </div>
-                        
+
                         <div class="event-info">
                             <i class="fas {% if event.is_online %}fa-laptop{% else %}fa-map-marker-alt{% endif %} text-muted"></i>
                             {% if event.is_online %}
@@ -197,7 +197,7 @@
                                 {% endif %}
                             {% endif %}
                         </div>
-                        
+
                         {% if event.categories %}
                             <div class="mt-2 mb-3">
                                 {% for category in event.categories %}
@@ -206,7 +206,7 @@
                             </div>
                         {% endif %}
                     </div>
-                    
+
                     <div class="card-footer bg-white border-top-0">
                         <!-- Approval buttons for admins and event managers -->
                         {% if current_user.can_approve_events() and event.status == 'pending' %}
@@ -223,17 +223,17 @@
                             </form>
                         </div>
                         {% endif %}
-                        
+
                         <div class="d-flex justify-content-between">
                             <a href="{{ url_for('event_details', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-eye me-1"></i> View Details
                             </a>
-                            
+
                             <div class="btn-group" role="group">
                                 <a href="{{ url_for('edit_event', event_id=event.id) }}" class="btn btn-sm btn-outline-secondary">
                                     <i class="fas fa-edit me-1"></i> Edit
                                 </a>
-                                
+
                                 {% if current_user.can_approve_events() %}
                                     <form method="POST" action="{{ url_for('delete_event', event_id=event.id) }}" 
                                           style="display: inline;" 
