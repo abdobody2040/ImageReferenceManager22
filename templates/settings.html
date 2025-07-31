@@ -136,7 +136,7 @@
                     <div class="mb-3">
                         <label for="app_name" class="form-label">Application Name</label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="app_name" value="PharmaEvents" placeholder="Application Name">
+                            <input type="text" class="form-control" id="app_name" value="{{ app_name }}" placeholder="Application Name">
                             <button class="btn btn-primary" type="button" id="update_name">Update Name</button>
                         </div>
                     </div>
@@ -161,6 +161,59 @@
                         </div>
                         <small class="text-muted">Recommended size: 200x200px, Formats: PNG, JPG, SVG (Max: 2MB)</small>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Login Page Content -->
+<div class="settings-section">
+    <div class="settings-header d-flex align-items-center">
+        <i class="fas fa-sign-in-alt fa-lg icon"></i>
+        <h3 class="mb-0">Login Page Content</h3>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12">
+                    <div class="mb-3">
+                        <label for="app_description" class="form-label">Application Description</label>
+                        <textarea class="form-control" id="app_description" rows="2" placeholder="Streamline your pharmaceutical events while maintaining strict regulatory compliance...">{{ app_description or 'Streamline your pharmaceutical events while maintaining strict regulatory compliance with GDPR, HIPAA, and Sunshine Act/EFPIA requirements.' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="feature1_title" class="form-label">Feature 1 Title</label>
+                        <input type="text" class="form-control" id="feature1_title" value="{{ feature1_title or 'Regulatory Compliance' }}" placeholder="Feature title">
+                    </div>
+                    <div class="mb-3">
+                        <label for="feature1_description" class="form-label">Feature 1 Description</label>
+                        <textarea class="form-control" id="feature1_description" rows="3" placeholder="Feature description">{{ feature1_description or 'Built-in tools for Sunshine Act reporting, HCP payment tracking, and compliance checks.' }}</textarea>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="feature2_title" class="form-label">Feature 2 Title</label>
+                        <input type="text" class="form-control" id="feature2_title" value="{{ feature2_title or 'Role-based Access Control' }}" placeholder="Feature title">
+                    </div>
+                    <div class="mb-3">
+                        <label for="feature2_description" class="form-label">Feature 2 Description</label>
+                        <textarea class="form-control" id="feature2_description" rows="3" placeholder="Feature description">{{ feature2_description or 'Granular permissions for admins, event managers, speakers, and attendees.' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <button type="button" class="btn btn-primary" id="update_login_content">
+                        <i class="fas fa-save me-2"></i> Update Login Page Content
+                    </button>
                 </div>
             </div>
         </div>

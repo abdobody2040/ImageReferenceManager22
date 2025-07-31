@@ -274,7 +274,19 @@ def login():
     
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
-    return render_template('login.html', app_name=app_name, theme_color=theme_color)
+    app_description = AppSetting.get_setting('app_description')
+    feature1_title = AppSetting.get_setting('feature1_title')
+    feature1_description = AppSetting.get_setting('feature1_description')
+    feature2_title = AppSetting.get_setting('feature2_title')
+    feature2_description = AppSetting.get_setting('feature2_description')
+    return render_template('login.html', 
+                         app_name=app_name, 
+                         theme_color=theme_color,
+                         app_description=app_description,
+                         feature1_title=feature1_title,
+                         feature1_description=feature1_description,
+                         feature2_title=feature2_title,
+                         feature2_description=feature2_description)
 
 @app.route('/dashboard')
 @login_required
@@ -754,10 +766,20 @@ def settings():
     users = [{'id': u.id, 'email': u.email, 'role': u.role} for u in User.query.all()]
     
     app_logo = AppSetting.get_setting('app_logo')
+    app_description = AppSetting.get_setting('app_description')
+    feature1_title = AppSetting.get_setting('feature1_title')
+    feature1_description = AppSetting.get_setting('feature1_description')
+    feature2_title = AppSetting.get_setting('feature2_title')
+    feature2_description = AppSetting.get_setting('feature2_description')
     return render_template('settings.html',
                          app_name=app_name,
                          app_logo=app_logo,
                          theme_color=theme_color,
+                         app_description=app_description,
+                         feature1_title=feature1_title,
+                         feature1_description=feature1_description,
+                         feature2_title=feature2_title,
+                         feature2_description=feature2_description,
                          categories=categories,
                          event_types=event_types,
                          users=users)
@@ -1493,6 +1515,32 @@ def api_update_app_settings():
         return jsonify({'success': True})
     except Exception as e:
         app.logger.error(f'Error in api_update_app_settings: {str(e)}')
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/settings/login-content', methods=['POST'])
+@login_required
+def api_update_login_content():
+    from flask import jsonify, request
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Save each field to database
+        if 'app_description' in data:
+            AppSetting.set_setting('app_description', data['app_description'])
+        if 'feature1_title' in data:
+            AppSetting.set_setting('feature1_title', data['feature1_title'])
+        if 'feature1_description' in data:
+            AppSetting.set_setting('feature1_description', data['feature1_description'])
+        if 'feature2_title' in data:
+            AppSetting.set_setting('feature2_title', data['feature2_title'])
+        if 'feature2_description' in data:
+            AppSetting.set_setting('feature2_description', data['feature2_description'])
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        app.logger.error(f'Error updating login content: {str(e)}')
         return jsonify({'error': str(e)}), 500
 
 @app.route('/uploads/<filename>')

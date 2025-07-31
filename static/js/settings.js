@@ -63,6 +63,51 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Handle login content update
+    const updateLoginContentBtn = document.getElementById('update_login_content');
+    if (updateLoginContentBtn) {
+        updateLoginContentBtn.addEventListener('click', function() {
+            const appDescription = document.getElementById('app_description').value.trim();
+            const feature1Title = document.getElementById('feature1_title').value.trim();
+            const feature1Description = document.getElementById('feature1_description').value.trim();
+            const feature2Title = document.getElementById('feature2_title').value.trim();
+            const feature2Description = document.getElementById('feature2_description').value.trim();
+
+            fetch('/api/settings/login-content', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    app_description: appDescription,
+                    feature1_title: feature1Title,
+                    feature1_description: feature1Description,
+                    feature2_title: feature2Title,
+                    feature2_description: feature2Description
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showAlert('Login page content updated successfully', 'success');
+                } else {
+                    showAlert(data.error || 'Error updating login page content', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Error updating login page content', 'danger');
+            });
+        });
+    }
+
     // Handle color picker change
     const colorPicker = document.getElementById('color_picker');
     const colorPreview = document.getElementById('color_preview');
