@@ -34,7 +34,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
-    "pool_reset_on_return": "commit"
+    "pool_reset_on_return": "commit",
+    "pool_size": 20,
+    "max_overflow": 30,
+    "pool_timeout": 30
 }
 
 # Initialize database
@@ -135,16 +138,16 @@ class Event(db.Model):
     description = db.Column(db.Text)
     event_type_id = db.Column(db.Integer, db.ForeignKey('event_type.id'))
     is_online = db.Column(db.Boolean, default=False)
-    start_datetime = db.Column(db.DateTime, nullable=False)
-    end_datetime = db.Column(db.DateTime)
+    start_datetime = db.Column(db.DateTime, nullable=False, index=True)
+    end_datetime = db.Column(db.DateTime, index=True)
     registration_deadline = db.Column(db.DateTime)
     venue_id = db.Column(db.Integer, nullable=True)  # Could be linked to venue table later
 
-    governorate = db.Column(db.String(100))
+    governorate = db.Column(db.String(100), index=True)
     image_file = db.Column(db.String(200), nullable=True)  # For storing event image filename
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    status = db.Column(db.String(20), default='pending')  # pending, active, declined
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    status = db.Column(db.String(20), default='pending', index=True)  # pending, active, declined
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     
     # Relationships
     event_type = db.relationship('EventType', backref='events')
@@ -450,17 +453,37 @@ def events():
         app.logger.error(f'Error fetching event types: {str(e)}')
         event_types = []
     
-    # Get events from database using ORM based on user role
+    # Get events from database using ORM based on user role with pagination
     try:
+        page = request.args.get('page', 1, type=int)
+        per_page = 50  # Show 50 events per page for better performance
+        
         if current_user.can_approve_events():
             # Admin and event managers see all events
-            events = Event.query.order_by(Event.start_datetime.desc()).all()
+            events_query = Event.query.order_by(Event.start_datetime.desc())
         else:
             # Medical reps only see their own events
-            events = Event.query.filter_by(user_id=current_user.id).order_by(Event.start_datetime.desc()).all()
+            events_query = Event.query.filter_by(user_id=current_user.id).order_by(Event.start_datetime.desc())
+        
+        # Get paginated results
+        events_pagination = events_query.paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
+        events = events_pagination.items
+        has_prev = events_pagination.has_prev
+        has_next = events_pagination.has_next
+        prev_num = events_pagination.prev_num
+        next_num = events_pagination.next_num
+        
     except Exception as e:
         app.logger.error(f'Error fetching events: {str(e)}')
         events = []
+        has_prev = False
+        has_next = False
+        prev_num = None
+        next_num = None
     
     app_logo = AppSetting.get_setting('app_logo')
     return render_template('events.html', 
@@ -469,7 +492,11 @@ def events():
                          theme_color=theme_color,
                          events=events, 
                          categories=categories,
-                         event_types=event_types)
+                         event_types=event_types,
+                         has_prev=has_prev,
+                         has_next=has_next,
+                         prev_num=prev_num,
+                         next_num=next_num)
 
 @app.route('/event_details/<int:event_id>')
 @login_required
@@ -1478,6 +1505,7 @@ def api_requester_data():
 
 
 @app.route('/api/settings/theme', methods=['POST'])
+@login_required
 def api_update_theme():
     from flask import jsonify, request
     try:
@@ -1505,6 +1533,7 @@ def api_update_theme():
         return jsonify({'error': str(e), 'debug': 'Server error occurred'}), 500
 
 @app.route('/api/settings/app', methods=['POST'])
+@login_required
 def api_update_app_settings():
     from flask import jsonify, request
     try:
