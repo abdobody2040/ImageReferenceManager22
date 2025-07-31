@@ -716,7 +716,7 @@ def settings():
                          event_types=event_types,
                          users=users)
 
-@app.route('/edit_event/<int:event_id>')
+@app.route('/edit_event/<int:event_id>', methods=['GET', 'POST'])
 @login_required
 def edit_event(event_id):
     """Edit an existing event"""
@@ -728,8 +728,78 @@ def edit_event(event_id):
         return redirect(url_for('events'))
     
     if request.method == 'POST':
-        # Handle form submission (similar to create_event)
-        pass
+        # Handle form submission for event updates
+        try:
+            # Get form data
+            title = request.form.get('title', '').strip()
+            description = request.form.get('description', '').strip()
+            event_type_id = request.form.get('event_type')
+            category_id = request.form.get('categories')
+            is_online = 'is_online' in request.form
+            start_date = request.form.get('start_date')
+            start_time = request.form.get('start_time')
+            end_date = request.form.get('end_date')
+            end_time = request.form.get('end_time')
+            governorate = request.form.get('governorate')
+            
+            # Update event fields
+            if title:
+                event.name = title
+            if description:
+                event.description = description
+            if event_type_id:
+                event.event_type_id = int(event_type_id)
+            event.is_online = is_online
+            if governorate:
+                event.governorate = governorate
+            
+            # Update datetime fields
+            if start_date:
+                if start_time:
+                    event.start_datetime = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
+                else:
+                    event.start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
+            
+            if end_date:
+                if end_time:
+                    event.end_datetime = datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M")
+                else:
+                    event.end_datetime = datetime.strptime(end_date, "%Y-%m-%d")
+            
+            # Handle image upload
+            event_image = request.files.get('event_image')
+            if event_image and event_image.filename:
+                allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+                if '.' in event_image.filename:
+                    file_ext = event_image.filename.rsplit('.', 1)[1].lower()
+                    if file_ext in allowed_extensions:
+                        upload_folder = os.path.join(app.static_folder, 'uploads')
+                        os.makedirs(upload_folder, exist_ok=True)
+                        
+                        image_filename = f"event_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{file_ext}"
+                        image_path = os.path.join(upload_folder, image_filename)
+                        event_image.save(image_path)
+                        
+                        event.image_file = image_filename
+                        app.logger.info(f'Event image updated: {image_filename}')
+            
+            # Update category association
+            if category_id:
+                # Clear existing categories
+                event.categories.clear()
+                # Add new category
+                category = EventCategory.query.get(int(category_id))
+                if category:
+                    event.categories.append(category)
+            
+            db.session.commit()
+            flash(f'Event "{event.name}" updated successfully!', 'success')
+            return redirect(url_for('events'))
+            
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f'Error updating event: {str(e)}')
+            flash('Error updating event. Please try again.', 'danger')
     
     # Get app settings
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
@@ -864,11 +934,11 @@ def download_users_template():
     import io
     import pandas as pd
     
-    # Create sample data for the template - Full Name is optional
+    # Create sample data for the template - Required columns first
     sample_data = {
         'Email': ['ahmed.hassan@example.com', 'sarah.mohamed@example.com', 'mohamed.ali@example.com'],
-        'Password': ['SecurePass123!', 'MyPassword456#', 'AdminPass789$'],
         'Role': ['medical_rep', 'event_manager', 'admin'],
+        'Password': ['SecurePass123!', 'MyPassword456#', 'AdminPass789$'],
         'Full Name': ['Dr. Ahmed Hassan', 'Dr. Sarah Mohamed', 'Dr. Mohamed Ali'],  # Optional field
         'Department': ['Cardiology', 'Neurology', 'Administration'],
         'Phone': ['+20 123 456 7890', '+20 987 654 3210', '+20 555 123 4567'],

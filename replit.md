@@ -126,10 +126,12 @@ Changelog:
   - ✅ Successfully migrated application from Replit Agent to standard Replit environment
   - ✅ Fixed JavaScript syntax errors in dashboard.js causing browser console warnings
   - ✅ Made Full Name field optional in bulk user upload functionality
+  - ✅ Updated bulk user upload template to show only required columns: Email, Role, Password
   - ✅ Added optional image upload feature to event creation with proper validation
   - ✅ Enhanced events page button layout with grouped Edit/Delete actions
   - ✅ Added comprehensive event details page with complete event information display
-  - ✅ Fixed event viewing and editing functionality with proper route handling
+  - ✅ Fixed event viewing and editing functionality with proper route handling and POST method support
+  - ✅ Fixed dashboard API endpoints to show real data instead of hardcoded zeros
   - ✅ Enhanced dashboard chart initialization with better error handling
   - ✅ Updated application to run on port 5000 for standard Replit environment
   - ✅ Implemented proper PostgreSQL database integration with fallback support
