@@ -282,10 +282,10 @@ function initMonthlyChart() {
         const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
             type: 'bar',
             data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                labels: data.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
                 datasets: [{
                     label: 'Events per Month',
-                    data: data.monthly_counts || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    data: data.data || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                     backgroundColor: 'rgba(15, 110, 132, 0.8)',
                     borderColor: 'rgb(15, 110, 132)',
                     borderWidth: 1

@@ -122,6 +122,7 @@ class Event(db.Model):
     venue_id = db.Column(db.Integer, nullable=True)  # Could be linked to venue table later
 
     governorate = db.Column(db.String(100))
+    image_file = db.Column(db.String(200), nullable=True)  # For storing event image filename
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(20), default='active')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -1172,7 +1173,7 @@ def api_dashboard_stats():
             'completed_events': 0
         })
 
-@app.route('/api/dashboard/category_data')
+@app.route('/api/dashboard/categories')
 @login_required
 def api_category_data():
     from flask import jsonify
@@ -1196,7 +1197,7 @@ def api_category_data():
         app.logger.error(f'Error getting category data: {str(e)}')
         return jsonify([])
 
-@app.route('/api/dashboard/monthly_data')
+@app.route('/api/dashboard/monthly')
 @login_required  
 def api_monthly_data():
     from flask import jsonify
@@ -1233,7 +1234,39 @@ def api_monthly_data():
             'data': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         })
 
-@app.route('/api/dashboard/requester_data')
+@app.route('/api/dashboard/event-types')
+@login_required
+def api_event_types_data():
+    from flask import jsonify
+    try:
+        # Get event type distribution from actual events
+        result = db.session.execute(db.text("""
+            SELECT et.name, COUNT(e.id) as count
+            FROM event_type et
+            LEFT JOIN event e ON et.id = e.event_type_id
+            GROUP BY et.id, et.name
+            HAVING COUNT(e.id) > 0
+            ORDER BY count DESC
+        """))
+        
+        event_types_data = [{'name': row[0], 'count': row[1]} for row in result]
+        
+        # If no events, show online vs offline distribution
+        if not event_types_data:
+            online_count = Event.query.filter_by(is_online=True).count()
+            offline_count = Event.query.filter_by(is_online=False).count()
+            if online_count > 0 or offline_count > 0:
+                event_types_data = [
+                    {'name': 'Online Events', 'count': online_count},
+                    {'name': 'Offline Events', 'count': offline_count}
+                ]
+        
+        return jsonify(event_types_data)
+    except Exception as e:
+        app.logger.error(f'Error getting event types data: {str(e)}')
+        return jsonify([])
+
+@app.route('/api/dashboard/requesters')
 @login_required
 def api_requester_data():
     from flask import jsonify
