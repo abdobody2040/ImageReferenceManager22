@@ -118,6 +118,7 @@ class Event(db.Model):
     is_online = db.Column(db.Boolean, default=False)
     start_datetime = db.Column(db.DateTime, nullable=False)
     end_datetime = db.Column(db.DateTime)
+    registration_deadline = db.Column(db.DateTime)
     venue_id = db.Column(db.Integer, nullable=True)  # Could be linked to venue table later
 
     governorate = db.Column(db.String(100))
@@ -772,6 +773,19 @@ def delete_event(event_id):
     if not current_user.is_admin():
         flash('Access denied. Admin privileges required.', 'danger')
         return redirect(url_for('events'))
+    
+    try:
+        event = Event.query.get_or_404(event_id)
+        event_name = event.name
+        db.session.delete(event)
+        db.session.commit()
+        flash(f'Event "{event_name}" has been deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error deleting event: {str(e)}')
+        flash('Error deleting event. Please try again.', 'danger')
+    
+    return redirect(url_for('events'))
     
     event = Event.query.get_or_404(event_id)
     event_name = event.name

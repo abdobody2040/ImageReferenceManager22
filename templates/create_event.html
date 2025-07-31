@@ -187,7 +187,7 @@
                     <div class="mb-3">
                         <label for="registration_deadline_date" class="form-label">Registration Deadline Date</label>
                         <input type="date" class="form-control" id="registration_deadline_date" name="registration_deadline_date" autocomplete="off"
-                               value="{{ event.registration_deadline.strftime('%Y-%m-%d') if event else '' }}">
+                               value="{{ event.registration_deadline.strftime('%Y-%m-%d') if event and event.registration_deadline else '' }}">
                     </div>
                 </div>
                 
@@ -195,7 +195,7 @@
                     <div class="mb-3">
                         <label for="registration_deadline_time" class="form-label">Registration Deadline Time</label>
                         <input type="time" class="form-control" id="registration_deadline_time" name="registration_deadline_time" autocomplete="off"
-                               value="{{ event.registration_deadline.strftime('%H:%M') if event else '' }}">
+                               value="{{ event.registration_deadline.strftime('%H:%M') if event and event.registration_deadline else '' }}">
                     </div>
                 </div>
             </div>

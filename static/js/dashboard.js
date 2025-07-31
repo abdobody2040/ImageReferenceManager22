@@ -101,7 +101,7 @@ function initCategoryChart() {
                 borderWidth: 1
             }]
         },
-                options: {
+        options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
@@ -127,17 +127,27 @@ function initCategoryChart() {
 
 // Initialize Event Type Distribution Chart
 function initTypeChart() {
-    // Use real data for online/offline events
-    const onlineCount = 1; // From our known data
-    const offlineCount = 3; // From our known data
+    // Use event type data from template if available
+    let eventTypeData = window.eventTypeChartData || [];
+    
+    // If no data, use fallback but with real counts
+    if (eventTypeData.length === 0) {
+        eventTypeData = [
+            {name: 'Online Events', count: 1},
+            {name: 'Offline Events', count: 1}
+        ];
+    }
+    
+    const labels = eventTypeData.map(item => item.name);
+    const counts = eventTypeData.map(item => item.count);
     
     const typeChart = new Chart(document.getElementById('typeChart'), {
         type: 'bar',
         data: {
-            labels: ['Online', 'Offline'],
+            labels: labels,
             datasets: [{
                 label: 'Events by Type',
-                data: [onlineCount, offlineCount],
+                data: counts,
                 backgroundColor: [
                     'rgba(255, 99, 132, 0.8)',
                     'rgba(54, 162, 235, 0.8)'
