@@ -177,6 +177,21 @@
     <div class="card">
         <div class="card-body">
             <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="main_tagline" class="form-label">Main Tagline</label>
+                        <input type="text" class="form-control" id="main_tagline" value="{{ main_tagline or 'Compliance-Driven Event Management' }}" placeholder="Main tagline shown on login page">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="main_header" class="form-label">Main Header</label>
+                        <input type="text" class="form-control" id="main_header" value="{{ main_header or 'Secure & Compliant Event Management for ' + app_name }}" placeholder="Main header text">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
                 <div class="col-12">
                     <div class="mb-3">
                         <label for="app_description" class="form-label">Application Description</label>

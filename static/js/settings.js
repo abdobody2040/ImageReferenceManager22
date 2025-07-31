@@ -67,6 +67,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const updateLoginContentBtn = document.getElementById('update_login_content');
     if (updateLoginContentBtn) {
         updateLoginContentBtn.addEventListener('click', function() {
+            const mainTagline = document.getElementById('main_tagline').value.trim();
+            const mainHeader = document.getElementById('main_header').value.trim();
             const appDescription = document.getElementById('app_description').value.trim();
             const feature1Title = document.getElementById('feature1_title').value.trim();
             const feature1Description = document.getElementById('feature1_description').value.trim();
@@ -81,6 +83,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 credentials: 'include',
                 body: JSON.stringify({
+                    main_tagline: mainTagline,
+                    main_header: mainHeader,
                     app_description: appDescription,
                     feature1_title: feature1Title,
                     feature1_description: feature1Description,

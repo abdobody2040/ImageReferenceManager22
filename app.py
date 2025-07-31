@@ -274,6 +274,8 @@ def login():
     
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
+    main_tagline = AppSetting.get_setting('main_tagline')
+    main_header = AppSetting.get_setting('main_header')
     app_description = AppSetting.get_setting('app_description')
     feature1_title = AppSetting.get_setting('feature1_title')
     feature1_description = AppSetting.get_setting('feature1_description')
@@ -282,6 +284,8 @@ def login():
     return render_template('login.html', 
                          app_name=app_name, 
                          theme_color=theme_color,
+                         main_tagline=main_tagline,
+                         main_header=main_header,
                          app_description=app_description,
                          feature1_title=feature1_title,
                          feature1_description=feature1_description,
@@ -766,6 +770,8 @@ def settings():
     users = [{'id': u.id, 'email': u.email, 'role': u.role} for u in User.query.all()]
     
     app_logo = AppSetting.get_setting('app_logo')
+    main_tagline = AppSetting.get_setting('main_tagline')
+    main_header = AppSetting.get_setting('main_header')
     app_description = AppSetting.get_setting('app_description')
     feature1_title = AppSetting.get_setting('feature1_title')
     feature1_description = AppSetting.get_setting('feature1_description')
@@ -775,6 +781,8 @@ def settings():
                          app_name=app_name,
                          app_logo=app_logo,
                          theme_color=theme_color,
+                         main_tagline=main_tagline,
+                         main_header=main_header,
                          app_description=app_description,
                          feature1_title=feature1_title,
                          feature1_description=feature1_description,
@@ -1527,6 +1535,10 @@ def api_update_login_content():
             return jsonify({'error': 'No data provided'}), 400
         
         # Save each field to database
+        if 'main_tagline' in data:
+            AppSetting.set_setting('main_tagline', data['main_tagline'])
+        if 'main_header' in data:
+            AppSetting.set_setting('main_header', data['main_header'])
         if 'app_description' in data:
             AppSetting.set_setting('app_description', data['app_description'])
         if 'feature1_title' in data:
