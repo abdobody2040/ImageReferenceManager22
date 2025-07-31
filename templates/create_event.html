@@ -94,6 +94,19 @@
                         <small class="form-text text-muted">Select one category for this event</small>
                     </div>
                     
+                    <!-- Event Image Upload (Optional) -->
+                    <div class="mb-3">
+                        <label for="event_image" class="form-label">Event Image</label>
+                        <input type="file" class="form-control" id="event_image" name="event_image" 
+                               accept="image/*">
+                        <small class="form-text text-muted">Optional - Upload an image for this event (PNG, JPG, JPEG)</small>
+                        {% if event and event.image_file %}
+                            <div class="mt-2">
+                                <small class="text-success">Current image: {{ event.image_file }}</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
                     <!-- Online Event Checkbox -->
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="is_online" name="is_online"

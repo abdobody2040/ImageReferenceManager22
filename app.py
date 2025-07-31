@@ -604,6 +604,29 @@ def create_event():
                 else:
                     end_datetime = datetime.strptime(end_date, "%Y-%m-%d")
             
+            # Handle optional image upload
+            image_filename = None
+            event_image = request.files.get('event_image')
+            
+            if event_image and event_image.filename:
+                # Validate image file
+                allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+                if '.' in event_image.filename:
+                    file_ext = event_image.filename.rsplit('.', 1)[1].lower()
+                    if file_ext in allowed_extensions:
+                        # Create uploads directory if it doesn't exist
+                        upload_folder = os.path.join(app.static_folder, 'uploads')
+                        os.makedirs(upload_folder, exist_ok=True)
+                        
+                        # Generate unique filename
+                        image_filename = f"event_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{file_ext}"
+                        image_path = os.path.join(upload_folder, image_filename)
+                        event_image.save(image_path)
+                        
+                        app.logger.info(f'Event image saved: {image_filename}')
+                    else:
+                        flash('Invalid image format. Please upload PNG, JPG, JPEG, or GIF files.', 'warning')
+
             # Create new event using SQLAlchemy ORM instead of raw SQL
             new_event = Event(
                 name=title,
@@ -613,7 +636,7 @@ def create_event():
                 start_datetime=start_datetime,
                 end_datetime=end_datetime,
                 venue_id=None,  # We'll implement venue handling later
-
+                image_file=image_filename,  # Add image filename to event
                 governorate=governorate,
                 user_id=current_user.id
             )

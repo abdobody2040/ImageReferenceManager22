@@ -280,7 +280,6 @@ function initRequesterChart() {
                         }
                     }
                 }
-            });
         });
 }
 
