@@ -118,10 +118,34 @@ PharmaEvents is a web-based event management application designed specifically f
 - **Process Management**: Parallel workflow execution
 - **File Storage**: Static file serving for uploads
 
+## Role-Based Access Control
+
+### User Roles
+- **Admin**: Full system access, can approve/decline all events, see all events and dashboard data
+- **Event Manager**: Can approve/decline events, see all events and dashboard data, cannot manage users
+- **Medical Rep**: Can create events (start in pending status), only see their own events and dashboard data
+
+### Event Status Flow
+- **Medical Reps**: Events created in "pending" status, require approval
+- **Admin/Event Managers**: Events created directly in "active" status
+- **Approval Process**: Admin and Event Managers can approve (active) or decline events
+- **Event Visibility**: Medical reps see only their own events, Admin/Event Managers see all events
+
 ## Changelog
 
 ```
 Changelog:
+- July 31, 2025. Role-Based Event Approval System Implementation
+  - ✅ Implemented role-based access control with admin, event_manager, and medical_rep roles
+  - ✅ Medical rep events start in "pending" status and require approval from admin/event manager
+  - ✅ Admin and event managers can approve/decline events with proper form handling
+  - ✅ Medical reps only see their own events in events page and dashboard
+  - ✅ Admin and event managers see all events from all users
+  - ✅ Updated dashboard statistics to respect user role visibility
+  - ✅ Updated all chart data (categories, monthly, requesters) to show role-appropriate data
+  - ✅ Enhanced events template with approval/decline buttons for authorized users
+  - ✅ Updated event status badges (pending, active, declined) with proper styling
+  - ✅ Added role-based filtering in events page with status filter for admins/managers
 - July 31, 2025. Migration and Enhancement Completion
   - ✅ Successfully migrated application from Replit Agent to standard Replit environment
   - ✅ Fixed JavaScript syntax errors in dashboard.js causing browser console warnings

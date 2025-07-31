@@ -62,6 +62,15 @@ class User(UserMixin, db.Model):
     
     def is_admin(self):
         return self.role == 'admin'
+    
+    def is_event_manager(self):
+        return self.role == 'event_manager'
+    
+    def is_medical_rep(self):
+        return self.role == 'medical_rep'
+    
+    def can_approve_events(self):
+        return self.role in ['admin', 'event_manager']
 
 # App Settings model for persistent configuration
 class AppSetting(db.Model):
@@ -134,7 +143,7 @@ class Event(db.Model):
     governorate = db.Column(db.String(100))
     image_file = db.Column(db.String(200), nullable=True)  # For storing event image filename
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    status = db.Column(db.String(20), default='active')
+    status = db.Column(db.String(20), default='pending')  # pending, active, declined
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -425,9 +434,14 @@ def events():
         app.logger.error(f'Error fetching event types: {str(e)}')
         event_types = []
     
-    # Get events from database using ORM
+    # Get events from database using ORM based on user role
     try:
-        events = Event.query.order_by(Event.start_datetime.desc()).all()
+        if current_user.can_approve_events():
+            # Admin and event managers see all events
+            events = Event.query.order_by(Event.start_datetime.desc()).all()
+        else:
+            # Medical reps only see their own events
+            events = Event.query.filter_by(user_id=current_user.id).order_by(Event.start_datetime.desc()).all()
     except Exception as e:
         app.logger.error(f'Error fetching events: {str(e)}')
         events = []
@@ -652,6 +666,9 @@ def create_event():
                         flash('Invalid image format. Please upload PNG, JPG, JPEG, or GIF files.', 'warning')
 
             # Create new event using SQLAlchemy ORM instead of raw SQL
+            # Set initial status based on user role
+            initial_status = 'active' if current_user.can_approve_events() else 'pending'
+            
             new_event = Event(
                 name=title,
                 description=description,
@@ -662,7 +679,8 @@ def create_event():
                 venue_id=None,  # We'll implement venue handling later
                 image_file=image_filename,  # Add image filename to event
                 governorate=governorate,
-                user_id=current_user.id
+                user_id=current_user.id,
+                status=initial_status
             )
             
             db.session.add(new_event)
@@ -680,7 +698,11 @@ def create_event():
             
             db.session.commit()
             
-            success_message = f'Event "{title}" created successfully!'
+            if current_user.can_approve_events():
+                success_message = f'Event "{title}" created successfully and is now active!'
+            else:
+                success_message = f'Event "{title}" created successfully and is pending approval from an admin or event manager.'
+            
             if attendees_count > 0:
                 success_message += f' Attendees file uploaded with {attendees_count} participants.'
             
@@ -854,34 +876,44 @@ def edit_event(event_id):
                          edit_mode=True,
                          event=event)
 
-@app.route('/approve_event/<int:event_id>')
+@app.route('/approve_event/<int:event_id>', methods=['POST'])
 @login_required
 def approve_event(event_id):
-    """Approve an event (admin only)"""
-    if not current_user.is_admin():
-        flash('Access denied. Admin privileges required.', 'danger')
+    """Approve an event (admin and event manager only)"""
+    if not current_user.can_approve_events():
+        flash('Access denied. Admin or Event Manager privileges required.', 'danger')
         return redirect(url_for('events'))
     
-    event = Event.query.get_or_404(event_id)
-    event.status = 'approved'
-    db.session.commit()
+    try:
+        event = Event.query.get_or_404(event_id)
+        event.status = 'active'
+        db.session.commit()
+        flash(f'Event "{event.name}" has been approved.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error approving event {event_id}: {str(e)}')
+        flash('Error approving event. Please try again.', 'danger')
     
-    flash(f'Event "{event.name}" has been approved.', 'success')
     return redirect(url_for('events'))
 
-@app.route('/reject_event/<int:event_id>')
+@app.route('/reject_event/<int:event_id>', methods=['POST'])
 @login_required
 def reject_event(event_id):
-    """Reject an event (admin only)"""
-    if not current_user.is_admin():
-        flash('Access denied. Admin privileges required.', 'danger')
+    """Reject an event (admin and event manager only)"""
+    if not current_user.can_approve_events():
+        flash('Access denied. Admin or Event Manager privileges required.', 'danger')
         return redirect(url_for('events'))
     
-    event = Event.query.get_or_404(event_id)
-    event.status = 'rejected'
-    db.session.commit()
+    try:
+        event = Event.query.get_or_404(event_id)
+        event.status = 'declined'
+        db.session.commit()
+        flash(f'Event "{event.name}" has been declined.', 'warning')
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error declining event {event_id}: {str(e)}')
+        flash('Error declining event. Please try again.', 'danger')
     
-    flash(f'Event "{event.name}" has been rejected.', 'success')
     return redirect(url_for('events'))
 
 @app.route('/delete_event/<int:event_id>', methods=['POST'])
@@ -1161,21 +1193,25 @@ def api_dashboard_stats():
     from datetime import datetime
     
     try:
-        # Get real stats from database
-        total_events = Event.query.count()
-        
-        # Upcoming events (events that haven't started yet)
+        # Get event counts based on user role
         now = datetime.now()
-        upcoming_events = Event.query.filter(Event.start_datetime > now).count()
         
-        # Online vs offline events
-        online_events = Event.query.filter(Event.is_online == True).count()
-        offline_events = Event.query.filter(Event.is_online == False).count()
-        
-        # Events by status
-        pending_events = Event.query.filter(Event.status == 'pending').count()
-        approved_events = Event.query.filter(Event.status == 'approved').count()
-        completed_events = Event.query.filter(Event.end_datetime < now).count()
+        if current_user.can_approve_events():
+            # Admin and event managers see all events
+            total_events = Event.query.count()
+            upcoming_events = Event.query.filter(Event.start_datetime > now).count()
+            online_events = Event.query.filter(Event.is_online == True).count()
+            offline_events = Event.query.filter(Event.is_online == False).count()
+            pending_events = Event.query.filter(Event.status == 'pending').count()
+            completed_events = Event.query.filter(Event.end_datetime < now).count()
+        else:
+            # Medical reps only see their own events
+            total_events = Event.query.filter_by(user_id=current_user.id).count()
+            upcoming_events = Event.query.filter(Event.user_id == current_user.id, Event.start_datetime > now).count()
+            online_events = Event.query.filter(Event.user_id == current_user.id, Event.is_online == True).count()
+            offline_events = Event.query.filter(Event.user_id == current_user.id, Event.is_online == False).count()
+            pending_events = Event.query.filter(Event.user_id == current_user.id, Event.status == 'pending').count()
+            completed_events = Event.query.filter(Event.user_id == current_user.id, Event.end_datetime < now).count()
         
         return jsonify({
             'total_events': total_events,
@@ -1206,11 +1242,18 @@ def api_category_data():
         categories = EventCategory.query.all()
         
         for category in categories:
-            event_count = len([event for event in category.events])
-            categories_data.append({
-                'name': category.name,
-                'count': event_count
-            })
+            if current_user.can_approve_events():
+                # Admin and event managers see all events
+                event_count = len([event for event in category.events])
+            else:
+                # Medical reps only see their own events
+                event_count = len([event for event in category.events if event.user_id == current_user.id])
+            
+            if event_count > 0:  # Only include categories with events
+                categories_data.append({
+                    'name': category.name,
+                    'count': event_count
+                })
         
         # Sort by count descending
         categories_data.sort(key=lambda x: x['count'], reverse=True)
@@ -1239,6 +1282,19 @@ def api_monthly_data():
             Event.start_datetime >= datetime(current_year, 1, 1),
             Event.start_datetime < datetime(current_year + 1, 1, 1)
         ).all()
+        
+        # Get events based on user role
+        if current_user.can_approve_events():
+            events = Event.query.filter(
+                Event.start_datetime >= datetime(current_year, 1, 1),
+                Event.start_datetime < datetime(current_year + 1, 1, 1)
+            ).all()
+        else:
+            events = Event.query.filter(
+                Event.user_id == current_user.id,
+                Event.start_datetime >= datetime(current_year, 1, 1),
+                Event.start_datetime < datetime(current_year + 1, 1, 1)
+            ).all()
         
         # Count events by month
         for event in events:
@@ -1297,12 +1353,21 @@ def api_requester_data():
         # Get events by requester (user who created them)
         requester_data = []
         
-        # Query events grouped by user
+        # Query events grouped by user based on role
         from sqlalchemy import func
-        results = db.session.query(
-            User.email,
-            func.count(Event.id).label('event_count')
-        ).join(Event, User.id == Event.user_id).group_by(User.id, User.email).all()
+        
+        if current_user.can_approve_events():
+            # Admin and event managers see all events by all users
+            results = db.session.query(
+                User.email,
+                func.count(Event.id).label('event_count')
+            ).join(Event, User.id == Event.user_id).group_by(User.id, User.email).all()
+        else:
+            # Medical reps only see their own stats
+            results = db.session.query(
+                User.email,
+                func.count(Event.id).label('event_count')
+            ).join(Event, User.id == Event.user_id).filter(User.id == current_user.id).group_by(User.id, User.email).all()
         
         for email, count in results:
             requester_data.append({
@@ -1317,6 +1382,8 @@ def api_requester_data():
     except Exception as e:
         app.logger.error(f'Error getting requester data: {str(e)}')
         return jsonify([])
+
+
 
 @app.route('/api/settings/theme', methods=['POST'])
 def api_update_theme():
