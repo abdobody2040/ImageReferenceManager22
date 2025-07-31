@@ -8,7 +8,7 @@
         <div class="col-lg-5 login-left d-none d-lg-block">
             <div class="text-center mb-4">
                 {% if app_logo %}
-                    <img src="{{ url_for('uploaded_file', filename=app_logo) }}" alt="{{ app_name }} Logo" width="80" height="80" style="object-fit: contain;">
+                    <img src="{{ app_logo }}" alt="{{ app_name }} Logo" width="80" height="80" style="object-fit: contain;">
                 {% else %}
                     <div class="mx-auto d-flex align-items-center justify-content-center bg-primary text-white rounded-circle" style="width: 80px; height: 80px; font-size: 36px; font-weight: bold;">
                         {{ app_name[0] if app_name else 'E' }}

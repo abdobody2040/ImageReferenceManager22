@@ -1555,7 +1555,7 @@ def api_update_login_content():
         app.logger.error(f'Error updating login content: {str(e)}')
         return jsonify({'error': str(e)}), 500
 
-@app.route('/uploads/<filename>')
+@app.route('/static/uploads/<filename>')
 def uploaded_file(filename):
     # Simple file serving route for uploaded files
     from flask import send_from_directory

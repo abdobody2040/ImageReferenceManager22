@@ -241,7 +241,7 @@
                         {% if app_logo %}
                         <div class="mb-2">
                             <small class="text-muted d-block">Current Logo:</small>
-                            <img src="{{ url_for('uploaded_file', filename=app_logo) }}" alt="Current Logo" 
+                            <img src="{{ app_logo }}" alt="Current Logo" 
                                  style="max-height: 50px; max-width: 200px; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
                         </div>
                         {% endif %}
