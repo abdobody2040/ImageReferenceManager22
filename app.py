@@ -22,7 +22,7 @@ egyptian_governorates = [
 
 # Create app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET")
+app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-for-pharmaevents-2025")
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
