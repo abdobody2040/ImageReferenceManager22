@@ -72,19 +72,29 @@ class AppSetting(db.Model):
     
     @classmethod
     def get_setting(cls, key, default=None):
-        setting = cls.query.filter_by(key=key).first()
-        return setting.value if setting else default
+        try:
+            setting = cls.query.filter_by(key=key).first()
+            return setting.value if setting else default
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f'Error getting setting {key}: {str(e)}')
+            return default
     
     @classmethod
     def set_setting(cls, key, value):
-        setting = cls.query.filter_by(key=key).first()
-        if setting:
-            setting.value = value
-        else:
-            setting = cls(key=key, value=value)
-            db.session.add(setting)
-        db.session.commit()
-        return setting
+        try:
+            setting = cls.query.filter_by(key=key).first()
+            if setting:
+                setting.value = value
+            else:
+                setting = cls(key=key, value=value)
+                db.session.add(setting)
+            db.session.commit()
+            return setting
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f'Error setting {key}: {str(e)}')
+            return None
 
 # Event Category model
 class EventCategory(db.Model):
@@ -134,7 +144,20 @@ class Event(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    try:
+        return db.session.get(User, int(user_id))
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error loading user {user_id}: {str(e)}')
+        return None
+
+def recover_db_session():
+    """Recover from database transaction errors"""
+    try:
+        db.session.rollback()
+        db.session.close()
+    except Exception:
+        pass
 
 def initialize_database():
     """Initialize database with tables and default data"""
