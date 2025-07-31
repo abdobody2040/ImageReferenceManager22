@@ -1649,24 +1649,93 @@ def api_delete_event_type(type_id):
 @login_required
 def api_add_user():
     from flask import jsonify, request
-    email = request.form.get('email', '').strip()
-    password = request.form.get('password', '').strip()
-    role = request.form.get('role', '').strip()
-    
-    if not email or not password or not role:
-        return jsonify({'error': 'Email, password, and role are required'}), 400
-    
-    # For now, return the actual data that was submitted
-    # In a real app, you'd save this to database
-    flash(f'User "{email}" added successfully', 'success')
-    return jsonify({'success': True, 'id': 2, 'email': email, 'role': role})
+    try:
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '').strip()
+        role = request.form.get('role', '').strip()
+        
+        if not email or not password or not role:
+            return jsonify({'error': 'Email, password, and role are required'}), 400
+        
+        # Validate role
+        valid_roles = ['admin', 'event_manager', 'medical_rep']
+        if role not in valid_roles:
+            return jsonify({'error': 'Invalid role specified'}), 400
+        
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            return jsonify({'error': 'User with this email already exists'}), 400
+        
+        # Create new user
+        new_user = User()
+        new_user.email = email
+        new_user.role = role
+        new_user.set_password(password)
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        app.logger.info(f'User {email} added successfully with role {role}')
+        return jsonify({
+            'success': True, 
+            'id': new_user.id, 
+            'email': new_user.email, 
+            'role': new_user.role
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error adding user: {str(e)}')
+        return jsonify({'error': f'Failed to add user: {str(e)}'}), 500
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 @login_required
 def api_delete_user(user_id):
     from flask import jsonify
-    flash('User deleted successfully', 'success')
-    return jsonify({'success': True})
+    try:
+        # Prevent users from deleting themselves
+        if user_id == current_user.id:
+            return jsonify({'error': 'You cannot delete your own account'}), 400
+        
+        user = User.query.get_or_404(user_id)
+        user_email = user.email
+        
+        # Check if user has created events
+        event_count = Event.query.filter_by(user_id=user_id).count()
+        if event_count > 0:
+            return jsonify({'error': f'Cannot delete user {user_email} - they have {event_count} associated events'}), 400
+        
+        db.session.delete(user)
+        db.session.commit()
+        
+        app.logger.info(f'User {user_email} deleted successfully')
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error deleting user: {str(e)}')
+        return jsonify({'error': f'Failed to delete user: {str(e)}'}), 500
+
+@app.route('/api/users/list', methods=['GET'])
+@login_required
+def api_list_users():
+    from flask import jsonify
+    try:
+        users = User.query.all()
+        users_data = []
+        for user in users:
+            users_data.append({
+                'id': user.id,
+                'email': user.email,
+                'role': user.role
+            })
+        
+        return jsonify({'success': True, 'users': users_data})
+        
+    except Exception as e:
+        app.logger.error(f'Error listing users: {str(e)}')
+        return jsonify({'error': f'Failed to load users: {str(e)}'}), 500
 
 @app.route('/api/auth/test')
 @login_required
