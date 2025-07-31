@@ -190,49 +190,47 @@ function initTypeChart() {
 
 // Initialize Monthly Events Chart
 function initMonthlyChart() {
-    // Use real monthly data based on our events (August has 3, September has 1)
     const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
         type: 'bar',
         data: {
             labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
             datasets: [{
                 label: 'Events per Month',
-                data: [0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0],
-                        backgroundColor: 'rgba(15, 110, 132, 0.8)',
-                        borderColor: 'rgb(15, 110, 132)',
-                        borderWidth: 1
-                    }]
+                data: [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                backgroundColor: 'rgba(15, 110, 132, 0.8)',
+                borderColor: 'rgb(15, 110, 132)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        title: {
-                            display: true,
-                            text: 'Monthly Event Volume (Last 12 Months)',
-                            font: {
-                                size: 16
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Number of Events'
-                            },
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
+                title: {
+                    display: true,
+                    text: 'Monthly Event Volume (Last 12 Months)',
+                    font: {
+                        size: 16
                     }
                 }
-            });
-        });
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Events'
+                    },
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
 }
 
 // Initialize Requester Chart
