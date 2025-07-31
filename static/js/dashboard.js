@@ -123,7 +123,6 @@ function initCategoryChart() {
                     }
                 }
             });
-        });
 }
 
 // Initialize Event Type Distribution Chart

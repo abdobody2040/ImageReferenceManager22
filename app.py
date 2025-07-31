@@ -363,11 +363,11 @@ def dashboard():
                          app_name=app_name,
                          app_logo=None,
                          theme_color=theme_color,
-                         total_events=4,  # Force actual value
-                         upcoming_events=4,  # Force actual value  
-                         online_events=1,  # Force actual value
-                         offline_events=3,  # Force actual value
-                         pending_events_count=0,
+                         total_events=total_events,
+                         upcoming_events=upcoming_events,  
+                         online_events=online_events,
+                         offline_events=offline_events,
+                         pending_events_count=pending_events_count,
                          recent_events=recent_events,
                          upcoming_events_list=upcoming_events_list,
                          category_data=category_data,
@@ -414,6 +414,26 @@ def events():
                          events=events, 
                          categories=categories,
                          event_types=event_types)
+
+@app.route('/event_details/<int:event_id>')
+@login_required
+def event_details(event_id):
+    """Display detailed information about a specific event"""
+    try:
+        event = Event.query.get_or_404(event_id)
+        app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
+        theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
+        app_logo = AppSetting.get_setting('app_logo')
+        
+        return render_template('event_details.html',
+                             app_name=app_name,
+                             app_logo=app_logo, 
+                             theme_color=theme_color,
+                             event=event)
+    except Exception as e:
+        app.logger.error(f'Error loading event details: {str(e)}')
+        flash('Event not found or error loading details.', 'danger')
+        return redirect(url_for('events'))
 
 @app.route('/create_event', methods=['GET', 'POST'])
 @login_required
@@ -806,12 +826,12 @@ def download_users_template():
     import io
     import pandas as pd
     
-    # Create sample data for the template
+    # Create sample data for the template - Full Name is optional
     sample_data = {
-        'Full Name': ['Dr. Ahmed Hassan', 'Dr. Sarah Mohamed', 'Dr. Mohamed Ali'],
         'Email': ['ahmed.hassan@example.com', 'sarah.mohamed@example.com', 'mohamed.ali@example.com'],
         'Password': ['SecurePass123!', 'MyPassword456#', 'AdminPass789$'],
         'Role': ['medical_rep', 'event_manager', 'admin'],
+        'Full Name': ['Dr. Ahmed Hassan', 'Dr. Sarah Mohamed', 'Dr. Mohamed Ali'],  # Optional field
         'Department': ['Cardiology', 'Neurology', 'Administration'],
         'Phone': ['+20 123 456 7890', '+20 987 654 3210', '+20 555 123 4567'],
         'Employee ID': ['EMP001', 'EMP002', 'EMP003']
