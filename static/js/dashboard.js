@@ -78,209 +78,398 @@ function loadDashboardStats() {
 
 // Initialize Category Chart
 function initCategoryChart() {
-    // Use data from template if available, otherwise use fallback
-    let chartData = window.categoryChartData || [
-        {name: 'Cardiology', count: 2},
-        {name: 'Pediatrics', count: 1}, 
-        {name: 'Medical Education', count: 1}
-    ];
-    
-    const labels = chartData.map(item => item.name);
-    const counts = chartData.map(item => item.count);
-    
-    // Generate colors
-    const backgroundColors = generateColors(chartData.length);
-    
-    const categoryChart = new Chart(document.getElementById('categoryChart'), {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: counts,
-                backgroundColor: backgroundColors,
-                borderWidth: 1
-            }]
-        },
-        options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 20,
-                                usePointStyle: true,
-                                pointStyle: 'circle'
-                            }
-                        },
-                        title: {
-                            display: true,
-                            text: 'Events by Category',
-                            font: {
-                                size: 16
-                            }
+    fetch('/api/dashboard/categories', { 
+        credentials: 'include',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const labels = data.map(item => item.name);
+        const counts = data.map(item => item.count);
+        
+        // Generate colors
+        const backgroundColors = generateColors(data.length);
+        
+        const categoryChart = new Chart(document.getElementById('categoryChart'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: counts,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Events by Category',
+                        font: {
+                            size: 16
                         }
                     }
                 }
-            });
+            }
+        });
+    })
+    .catch(error => {
+        console.error('Error loading category data:', error);
+        // Show empty chart on error
+        const categoryChart = new Chart(document.getElementById('categoryChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['No Data'],
+                datasets: [{
+                    data: [1],
+                    backgroundColor: ['#e9ecef'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Events by Category',
+                        font: {
+                            size: 16
+                        }
+                    }
+                }
+            }
+        });
+    });
 }
 
 // Initialize Event Type Distribution Chart
 function initTypeChart() {
-    // Use event type data from template if available
-    let eventTypeData = window.eventTypeChartData || [];
-    
-    // If no data, use fallback but with real counts
-    if (eventTypeData.length === 0) {
-        eventTypeData = [
-            {name: 'Online Events', count: 1},
-            {name: 'Offline Events', count: 1}
-        ];
-    }
-    
-    const labels = eventTypeData.map(item => item.name);
-    const counts = eventTypeData.map(item => item.count);
-    
-    const typeChart = new Chart(document.getElementById('typeChart'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Events by Type',
-                data: counts,
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.8)',
-                    'rgba(54, 162, 235, 0.8)'
-                ],
-                borderColor: [
-                    'rgb(255, 99, 132)',
-                    'rgb(54, 162, 235)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: true,
-                    text: 'Event Types Distribution',
-                    font: {
-                        size: 16
-                    }
-                }
+    fetch('/api/dashboard/event-types', { 
+        credentials: 'include',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const labels = data.map(item => item.name);
+        const counts = data.map(item => item.count);
+        
+        const typeChart = new Chart(document.getElementById('typeChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Events by Type',
+                    data: counts,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(255, 159, 64, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(255, 99, 132)',
+                        'rgb(54, 162, 235)',
+                        'rgb(255, 206, 86)',
+                        'rgb(75, 192, 192)',
+                        'rgb(153, 102, 255)',
+                        'rgb(255, 159, 64)'
+                    ],
+                    borderWidth: 1
+                }]
             },
-            scales: {
-                x: {
-                    beginAtZero: true,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
                     title: {
                         display: true,
-                        text: 'Number of Events'
+                        text: 'Event Types Distribution',
+                        font: {
+                            size: 16
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Events'
+                        }
                     }
                 }
             }
-        }
+        });
+    })
+    .catch(error => {
+        console.error('Error loading event type data:', error);
+        // Show empty chart on error
+        const typeChart = new Chart(document.getElementById('typeChart'), {
+            type: 'bar',
+            data: {
+                labels: ['No Data'],
+                datasets: [{
+                    label: 'Events by Type',
+                    data: [1],
+                    backgroundColor: ['#e9ecef'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Event Types Distribution',
+                        font: {
+                            size: 16
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Events'
+                        }
+                    }
+                }
+            }
+        });
     });
 }
 
 // Initialize Monthly Events Chart
 function initMonthlyChart() {
-    const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
-        type: 'bar',
-        data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            datasets: [{
-                label: 'Events per Month',
-                data: [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                backgroundColor: 'rgba(15, 110, 132, 0.8)',
-                borderColor: 'rgb(15, 110, 132)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: true,
-                    text: 'Monthly Event Volume (Last 12 Months)',
-                    font: {
-                        size: 16
-                    }
-                }
+    fetch('/api/dashboard/monthly', { 
+        credentials: 'include',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [{
+                    label: 'Events per Month',
+                    data: data.monthly_counts || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    backgroundColor: 'rgba(15, 110, 132, 0.8)',
+                    borderColor: 'rgb(15, 110, 132)',
+                    borderWidth: 1
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
                     title: {
                         display: true,
-                        text: 'Number of Events'
-                    },
-                    ticks: {
-                        stepSize: 1
+                        text: 'Monthly Event Volume (Last 12 Months)',
+                        font: {
+                            size: 16
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Events'
+                        },
+                        ticks: {
+                            stepSize: 1
+                        }
                     }
                 }
             }
-        }
+        });
+    })
+    .catch(error => {
+        console.error('Error loading monthly data:', error);
+        // Show empty chart on error
+        const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [{
+                    label: 'Events per Month',
+                    data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    backgroundColor: 'rgba(15, 110, 132, 0.8)',
+                    borderColor: 'rgb(15, 110, 132)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Monthly Event Volume (Last 12 Months)',
+                        font: {
+                            size: 16
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Events'
+                        },
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
     });
 }
 
 // Initialize Requester Chart
 function initRequesterChart() {
-    // Use sample requester data showing event distribution
-    const requesterChart = new Chart(document.getElementById('requesterChart'), {
-        type: 'bar',
-        data: {
-            labels: ['Medical Affairs', 'Marketing Team', 'Training Dept'],
-            datasets: [{
-                        axis: 'y',
-                        label: 'Events Created',
-                        data: [2, 1, 1],
-                        backgroundColor: [
-                            'rgba(54, 162, 235, 0.8)',
-                            'rgba(255, 206, 86, 0.8)',
-                            'rgba(255, 99, 132, 0.8)',
-                            'rgba(75, 192, 192, 0.8)',
-                            'rgba(153, 102, 255, 0.8)'
-                        ],
-                        borderWidth: 1
-                    }]
+    fetch('/api/dashboard/requesters', { 
+        credentials: 'include',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const labels = data.map(item => item.name);
+        const counts = data.map(item => item.count);
+        
+        const requesterChart = new Chart(document.getElementById('requesterChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    axis: 'y',
+                    label: 'Events Created',
+                    data: counts,
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Events by Requester',
+                        font: {
+                            size: 16
+                        }
+                    }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
+                scales: {
+                    x: {
+                        beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Events by Requester',
-                            font: {
-                                size: 16
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Number of Events'
-                            }
+                            text: 'Number of Events'
                         }
                     }
                 }
+            }
         });
+    })
+    .catch(error => {
+        console.error('Error loading requester data:', error);
+        // Show empty chart on error
+        const requesterChart = new Chart(document.getElementById('requesterChart'), {
+            type: 'bar',
+            data: {
+                labels: ['No Data'],
+                datasets: [{
+                    axis: 'y',
+                    label: 'Events Created',
+                    data: [1],
+                    backgroundColor: ['#e9ecef'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Events by Requester',
+                        font: {
+                            size: 16
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Events'
+                        }
+                    }
+                }
+            }
+        });
+    });
 }
 
 // Helper function to generate random colors for charts

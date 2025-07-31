@@ -133,6 +133,7 @@ Changelog:
   - ✅ Fixed event viewing and editing functionality with proper route handling and POST method support
   - ✅ Fixed dashboard API endpoints to show real data instead of hardcoded zeros
   - ✅ Enhanced dashboard chart initialization with better error handling
+  - ✅ Fixed dashboard charts to fetch real data from API endpoints instead of hardcoded fallback data
   - ✅ Updated application to run on port 5000 for standard Replit environment
   - ✅ Implemented proper PostgreSQL database integration with fallback support
   - ✅ Fixed all LSP diagnostics for improved code quality and performance
