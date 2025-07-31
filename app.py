@@ -953,8 +953,70 @@ def delete_event(event_id):
 @app.route('/export_events')
 @login_required
 def export_events():
-    flash('Export functionality will be implemented soon', 'info')
-    return redirect(url_for('events'))
+    """Export events to CSV file"""
+    from flask import make_response
+    import io
+    import csv
+    
+    try:
+        # Get events based on user role
+        if current_user.can_approve_events():
+            # Admin and event managers see all events
+            events = Event.query.order_by(Event.created_at.desc()).all()
+        else:
+            # Medical reps only see their own events
+            events = Event.query.filter_by(user_id=current_user.id).order_by(Event.created_at.desc()).all()
+        
+        # Create CSV content
+        output = io.StringIO()
+        fieldnames = [
+            'ID', 'Event Name', 'Description', 'Event Type', 'Is Online', 
+            'Start Date', 'End Date', 'Governorate', 'Categories', 
+            'Created By', 'Created At', 'Status'
+        ]
+        
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for event in events:
+            # Format event type
+            event_type = event.event_type.name if event.event_type else 'Not specified'
+            
+            # Format categories
+            categories = ', '.join([category.name for category in event.categories]) if event.categories else 'None'
+            
+            # Format dates
+            start_date = event.start_datetime.strftime('%Y-%m-%d %H:%M') if event.start_datetime else ''
+            end_date = event.end_datetime.strftime('%Y-%m-%d %H:%M') if event.end_datetime else ''
+            created_at = event.created_at.strftime('%Y-%m-%d %H:%M') if event.created_at else ''
+            
+            writer.writerow({
+                'ID': event.id,
+                'Event Name': event.name,
+                'Description': event.description or '',
+                'Event Type': event_type,
+                'Is Online': 'Yes' if event.is_online else 'No',
+                'Start Date': start_date,
+                'End Date': end_date,
+                'Governorate': event.governorate or '',
+                'Categories': categories,
+                'Created By': event.creator.email if event.creator else '',
+                'Created At': created_at,
+                'Status': event.status or 'Active'
+            })
+        
+        # Create response
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = f'attachment; filename=events_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        
+        app.logger.info(f'Events exported by user {current_user.email}: {len(events)} events')
+        return response
+        
+    except Exception as e:
+        app.logger.error(f'Error exporting events: {str(e)}')
+        flash('Error exporting events. Please try again.', 'danger')
+        return redirect(url_for('events'))
 
 @app.route('/api/download/attendees-template')
 @login_required
