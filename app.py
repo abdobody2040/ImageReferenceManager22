@@ -31,14 +31,32 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 # Configure database - Use PostgreSQL if available, SQLite as fallback
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///pharmaevents.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_recycle": 300,
-    "pool_pre_ping": True,
-    "pool_reset_on_return": "commit",
-    "pool_size": 20,
-    "max_overflow": 30,
-    "pool_timeout": 30
-}
+
+# Enhanced connection pooling for high-volume applications
+database_url = os.environ.get("DATABASE_URL", "sqlite:///pharmaevents.db")
+if database_url.startswith('postgresql'):
+    # PostgreSQL connection pooling optimized for 500k+ events
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_recycle": 3600,  # Longer recycle time for PostgreSQL
+        "pool_pre_ping": True,
+        "pool_reset_on_return": "commit",
+        "pool_size": 50,       # Increased pool size
+        "max_overflow": 100,   # Higher overflow for peak loads
+        "pool_timeout": 60,    # Longer timeout for complex queries
+        "connect_args": {
+            "options": "-c default_transaction_isolation=read committed"
+        }
+    }
+else:
+    # SQLite connection settings
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_recycle": 300,
+        "pool_pre_ping": True,
+        "pool_reset_on_return": "commit",
+        "pool_size": 20,
+        "max_overflow": 30,
+        "pool_timeout": 30
+    }
 
 # Initialize database
 db = SQLAlchemy(app)
@@ -49,13 +67,13 @@ login_manager.login_view = 'login'  # type: ignore
 login_manager.login_message = "Please log in to access this page."
 login_manager.login_message_category = "info"
 
-# User model
+# User model with performance indexes
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)  # Index for login queries
     password_hash = db.Column(db.String(256), nullable=False)
-    role = db.Column(db.String(20), default='user')
+    role = db.Column(db.String(20), default='user', index=True)  # Index for role-based queries
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -108,21 +126,21 @@ class AppSetting(db.Model):
             app.logger.error(f'Error setting {key}: {str(e)}')
             return None
 
-# Event Category model
+# Event Category model with performance indexes
 class EventCategory(db.Model):
     __tablename__ = 'event_category'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
+    name = db.Column(db.String(100), unique=True, nullable=False, index=True)  # Index for category lookups
     description = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)  # Index for ordering
 
-# Event Type model
+# Event Type model with performance indexes
 class EventType(db.Model):
     __tablename__ = 'event_type'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
+    name = db.Column(db.String(100), unique=True, nullable=False, index=True)  # Index for type lookups
     description = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)  # Index for ordering
 
 # Association table for many-to-many relationship between events and categories
 event_categories = db.Table('event_categories',
@@ -130,24 +148,33 @@ event_categories = db.Table('event_categories',
     db.Column('category_id', db.Integer, db.ForeignKey('event_category.id'), primary_key=True)
 )
 
-# Event model
+# Event model with comprehensive indexing for performance
 class Event(db.Model):
     __tablename__ = 'event'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
+    name = db.Column(db.String(200), nullable=False, index=True)  # Index for name searches
     description = db.Column(db.Text)
-    event_type_id = db.Column(db.Integer, db.ForeignKey('event_type.id'))
-    is_online = db.Column(db.Boolean, default=False)
+    event_type_id = db.Column(db.Integer, db.ForeignKey('event_type.id'), index=True)  # Index for type filtering
+    is_online = db.Column(db.Boolean, default=False, index=True)  # Index for online/offline filtering
     start_datetime = db.Column(db.DateTime, nullable=False, index=True)
     end_datetime = db.Column(db.DateTime, index=True)
-    registration_deadline = db.Column(db.DateTime)
+    registration_deadline = db.Column(db.DateTime, index=True)  # Index for deadline queries
     venue_id = db.Column(db.Integer, nullable=True)  # Could be linked to venue table later
 
     governorate = db.Column(db.String(100), index=True)
-    image_file = db.Column(db.String(200), nullable=True)  # For storing event image filename
+    image_file = db.Column(db.String(200), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     status = db.Column(db.String(20), default='pending', index=True)  # pending, active, declined
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    # Composite indexes for common query patterns
+    __table_args__ = (
+        db.Index('idx_event_user_status', 'user_id', 'status'),  # User's events by status
+        db.Index('idx_event_start_status', 'start_datetime', 'status'),  # Timeline queries
+        db.Index('idx_event_type_status', 'event_type_id', 'status'),  # Type filtering
+        db.Index('idx_event_created_user', 'created_at', 'user_id'),  # Recent events by user
+        db.Index('idx_event_governorate_status', 'governorate', 'status'),  # Location filtering
+    )
     
     # Relationships
     event_type = db.relationship('EventType', backref='events')
@@ -224,6 +251,34 @@ def initialize_database():
         
     except Exception as e:
         db.session.rollback()
+
+
+def optimize_database_for_scale():
+    """Apply additional optimizations for large-scale deployments"""
+    try:
+        # Create additional composite indexes for complex queries
+        with app.app_context():
+            # Only run if using PostgreSQL
+            if app.config["SQLALCHEMY_DATABASE_URI"].startswith('postgresql'):
+                app.logger.info('Applying PostgreSQL-specific optimizations...')
+                
+                # Enable query plan optimization
+                db.session.execute(db.text("SET shared_preload_libraries = 'pg_stat_statements'"))
+                
+                # Optimize for read-heavy workload
+                db.session.execute(db.text("SET default_statistics_target = 500"))
+                
+                # Enable parallel query execution for large datasets
+                db.session.execute(db.text("SET max_parallel_workers_per_gather = 4"))
+                
+                db.session.commit()
+                app.logger.info('PostgreSQL optimizations applied successfully')
+            
+    except Exception as e:
+        app.logger.error(f'Error applying database optimizations: {str(e)}')
+        db.session.rollback()
+
+
         app.logger.error(f'Error initializing database: {str(e)}')
         raise
 
@@ -246,6 +301,9 @@ def init_db_if_needed():
 
 # Call initialization
 init_db_if_needed()
+
+# Apply performance optimizations for large datasets
+optimize_database_for_scale()
 
 # Routes
 @app.route('/')
@@ -302,31 +360,44 @@ def dashboard():
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
     
-    # Calculate real dashboard statistics with explicit error handling
+    # Calculate dashboard statistics with optimized queries for large datasets
     try:
-        # Basic counts
-        total_events = Event.query.count()
+        now = datetime.now()
+        
+        # Build base query based on user role
+        if current_user.can_approve_events():
+            base_query = Event.query
+        else:
+            base_query = Event.query.filter_by(user_id=current_user.id)
+        
+        # Use optimized count queries with indexes
+        total_events = base_query.count()
         app.logger.info(f'Dashboard: Total events = {total_events}')
         
-        # Upcoming events (events starting after now)
-        now = datetime.now()
-        upcoming_events = Event.query.filter(Event.start_datetime > now).count()
+        # Upcoming events using indexed start_datetime
+        upcoming_events = base_query.filter(Event.start_datetime > now).count()
         app.logger.info(f'Dashboard: Upcoming events = {upcoming_events}')
         
-        # Online vs Offline events
-        online_events = Event.query.filter(Event.is_online == True).count()
-        offline_events = Event.query.filter(Event.is_online == False).count()
+        # Online vs Offline events using indexed is_online
+        online_events = base_query.filter(Event.is_online == True).count()
+        offline_events = base_query.filter(Event.is_online == False).count()
         app.logger.info(f'Dashboard: Online = {online_events}, Offline = {offline_events}')
         
-        # Pending events (if status column exists)
-        pending_events_count = Event.query.filter(Event.status == 'pending').count()
+        # Pending events using indexed status
+        pending_events_count = base_query.filter(Event.status == 'pending').count()
         
-        # Get recent events (last 5)
-        recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all()
+        # Get recent events with eager loading for better performance
+        recent_events = base_query.options(
+            db.joinedload(Event.event_type),
+            db.joinedload(Event.categories)
+        ).order_by(Event.created_at.desc()).limit(5).all()
         app.logger.info(f'Dashboard: Recent events count = {len(recent_events)}')
         
-        # Get upcoming events list for dashboard display
-        upcoming_events_list = Event.query.filter(Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all()
+        # Get upcoming events with eager loading
+        upcoming_events_list = base_query.options(
+            db.joinedload(Event.event_type),
+            db.joinedload(Event.categories)
+        ).filter(Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all()
         
         # Get category data for charts using direct event analysis
         try:
@@ -439,31 +510,74 @@ def events():
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
     
-    # Get categories from database
+    # Get filter parameters
+    search_query = request.args.get('search', '').strip()
+    selected_category = request.args.get('category', 'all')
+    selected_type = request.args.get('type', 'all')
+    selected_date = request.args.get('date', 'all')
+    selected_status = request.args.get('status', 'all')
+    
+    # Get categories and event types with optimized queries
     try:
-        categories = EventCategory.query.order_by(EventCategory.name).all()
+        categories = EventCategory.query.options(db.joinedload(EventCategory.events)).order_by(EventCategory.name).all()
     except Exception as e:
         app.logger.error(f'Error fetching categories: {str(e)}')
         categories = []
     
-    # Get event types from database
     try:
-        event_types = EventType.query.order_by(EventType.name).all()
+        event_types = EventType.query.options(db.joinedload(EventType.events)).order_by(EventType.name).all()
     except Exception as e:
         app.logger.error(f'Error fetching event types: {str(e)}')
         event_types = []
     
-    # Get events from database using ORM based on user role with pagination
+    # Build optimized query with database-level filtering
     try:
         page = request.args.get('page', 1, type=int)
-        per_page = 50  # Show 50 events per page for better performance
+        per_page = 50  # Optimized page size for 500k+ events
         
+        # Base query with eager loading for better performance
         if current_user.can_approve_events():
             # Admin and event managers see all events
-            events_query = Event.query.order_by(Event.start_datetime.desc())
+            events_query = Event.query.options(
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.creator),
+                db.joinedload(Event.categories)
+            )
         else:
             # Medical reps only see their own events
-            events_query = Event.query.filter_by(user_id=current_user.id).order_by(Event.start_datetime.desc())
+            events_query = Event.query.filter_by(user_id=current_user.id).options(
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.creator),
+                db.joinedload(Event.categories)
+            )
+        
+        # Apply database-level filters for performance
+        if search_query:
+            events_query = events_query.filter(
+                Event.name.ilike(f'%{search_query}%') |
+                Event.description.ilike(f'%{search_query}%')
+            )
+        
+        if selected_category != 'all':
+            events_query = events_query.join(Event.categories).filter(
+                EventCategory.id == int(selected_category)
+            )
+        
+        if selected_type != 'all':
+            events_query = events_query.filter(Event.event_type_id == int(selected_type))
+        
+        if selected_status != 'all' and current_user.can_approve_events():
+            events_query = events_query.filter(Event.status == selected_status)
+        
+        # Apply date filters
+        now = datetime.now()
+        if selected_date == 'upcoming':
+            events_query = events_query.filter(Event.start_datetime > now)
+        elif selected_date == 'past':
+            events_query = events_query.filter(Event.start_datetime < now)
+        
+        # Order by start_datetime for consistent pagination
+        events_query = events_query.order_by(Event.start_datetime.desc())
         
         # Get paginated results
         events_pagination = events_query.paginate(
@@ -496,7 +610,12 @@ def events():
                          has_prev=has_prev,
                          has_next=has_next,
                          prev_num=prev_num,
-                         next_num=next_num)
+                         next_num=next_num,
+                         search_query=search_query,
+                         selected_category=selected_category,
+                         selected_type=selected_type,
+                         selected_date=selected_date,
+                         selected_status=selected_status)
 
 @app.route('/event_details/<int:event_id>')
 @login_required
@@ -1355,24 +1474,37 @@ def api_dashboard_stats():
 @login_required
 def api_category_data():
     from flask import jsonify
+    from sqlalchemy import func
     try:
-        # Get category distribution from database
-        categories_data = []
-        categories = EventCategory.query.all()
+        # Optimized query using database aggregation instead of Python loops
+        if current_user.can_approve_events():
+            # Admin and event managers see all events
+            query = db.session.query(
+                EventCategory.name,
+                func.count(Event.id).label('event_count')
+            ).join(
+                event_categories, EventCategory.id == event_categories.c.category_id
+            ).join(
+                Event, Event.id == event_categories.c.event_id
+            ).group_by(EventCategory.id, EventCategory.name).all()
+        else:
+            # Medical reps only see their own events
+            query = db.session.query(
+                EventCategory.name,
+                func.count(Event.id).label('event_count')
+            ).join(
+                event_categories, EventCategory.id == event_categories.c.category_id
+            ).join(
+                Event, Event.id == event_categories.c.event_id
+            ).filter(
+                Event.user_id == current_user.id
+            ).group_by(EventCategory.id, EventCategory.name).all()
         
-        for category in categories:
-            if current_user.can_approve_events():
-                # Admin and event managers see all events
-                event_count = len([event for event in category.events])
-            else:
-                # Medical reps only see their own events
-                event_count = len([event for event in category.events if event.user_id == current_user.id])
-            
-            if event_count > 0:  # Only include categories with events
-                categories_data.append({
-                    'name': category.name,
-                    'count': event_count
-                })
+        categories_data = [
+            {'name': name, 'count': count}
+            for name, count in query
+            if count > 0
+        ]
         
         # Sort by count descending
         categories_data.sort(key=lambda x: x['count'], reverse=True)
@@ -1387,39 +1519,40 @@ def api_category_data():
 def api_monthly_data():
     from flask import jsonify
     from datetime import datetime
-    import calendar
+    from sqlalchemy import func, extract
     
     try:
         # Get current year for monthly breakdown
         current_year = datetime.now().year
         
-        # Initialize monthly data
-        monthly_counts = [0] * 12
-        
-        # Get events from current year
-        events = Event.query.filter(
-            Event.start_datetime >= datetime(current_year, 1, 1),
-            Event.start_datetime < datetime(current_year + 1, 1, 1)
-        ).all()
-        
-        # Get events based on user role
+        # Optimized query using database aggregation
         if current_user.can_approve_events():
-            events = Event.query.filter(
+            # Admin and event managers see all events
+            monthly_query = db.session.query(
+                extract('month', Event.start_datetime).label('month'),
+                func.count(Event.id).label('count')
+            ).filter(
                 Event.start_datetime >= datetime(current_year, 1, 1),
                 Event.start_datetime < datetime(current_year + 1, 1, 1)
-            ).all()
+            ).group_by(extract('month', Event.start_datetime)).all()
         else:
-            events = Event.query.filter(
+            # Medical reps only see their own events
+            monthly_query = db.session.query(
+                extract('month', Event.start_datetime).label('month'),
+                func.count(Event.id).label('count')
+            ).filter(
                 Event.user_id == current_user.id,
                 Event.start_datetime >= datetime(current_year, 1, 1),
                 Event.start_datetime < datetime(current_year + 1, 1, 1)
-            ).all()
+            ).group_by(extract('month', Event.start_datetime)).all()
         
-        # Count events by month
-        for event in events:
-            if event.start_datetime:
-                month_index = event.start_datetime.month - 1  # 0-based index
-                monthly_counts[month_index] += 1
+        # Initialize monthly counts
+        monthly_counts = [0] * 12
+        
+        # Fill in the data from query results
+        for month, count in monthly_query:
+            if month:
+                monthly_counts[int(month) - 1] = count
         
         return jsonify({
             'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
