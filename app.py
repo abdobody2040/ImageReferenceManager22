@@ -337,6 +337,7 @@ def dashboard():
             recent_events = []
             upcoming_events_list = []
             category_data = []
+            event_type_data = []
             app.logger.error(f'Exception fallback - using real data: total={total_events}')
         except:
             total_events = 4
@@ -855,9 +856,8 @@ def download_users_template():
     
     # Create Excel file in memory
     output = io.BytesIO()
-    writer = pd.ExcelWriter(output, engine='openpyxl')
-    df.to_excel(writer, index=False, sheet_name='Users')
-    writer.close()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Users')
     output.seek(0)
     
     # Create response
@@ -946,9 +946,9 @@ def bulk_user_upload():
             for index, row in df.iterrows():
                 try:
                     row_num = int(index) if isinstance(index, (int, float)) else 0
-                    email = str(row[email_col]).strip().lower() if email_col and email_col in row and pd.notna(row[email_col]) else ''
-                    role = str(row[role_col]).strip().lower() if role_col and role_col in row and pd.notna(row[role_col]) else ''
-                    user_password = str(row[password_col]).strip() if password_col and password_col in row and pd.notna(row[password_col]) else None
+                    email = str(row[email_col]).strip().lower() if email_col and pd.notna(row.get(email_col, '')) else ''
+                    role = str(row[role_col]).strip().lower() if role_col and pd.notna(row.get(role_col, '')) else ''
+                    user_password = str(row[password_col]).strip() if password_col and pd.notna(row.get(password_col, '')) else None
                     
                     # Validate required fields
                     if not email or not role or not user_password:
