@@ -1061,38 +1061,136 @@ def bulk_user_upload():
                          app_name=app_name, theme_color=theme_color)
 
 @app.route('/api/dashboard/stats')
+@login_required
 def api_dashboard_stats():
     from flask import jsonify
-    return jsonify({
-        'total_events': 0,
-        'upcoming_events': 0,
-        'online_events': 0,
-        'offline_events': 0,
-        'pending_events': 0,
-        'completed_events': 0
-    })
+    from datetime import datetime
+    
+    try:
+        # Get real stats from database
+        total_events = Event.query.count()
+        
+        # Upcoming events (events that haven't started yet)
+        now = datetime.now()
+        upcoming_events = Event.query.filter(Event.start_datetime > now).count()
+        
+        # Online vs offline events
+        online_events = Event.query.filter(Event.is_online == True).count()
+        offline_events = Event.query.filter(Event.is_online == False).count()
+        
+        # Events by status
+        pending_events = Event.query.filter(Event.status == 'pending').count()
+        approved_events = Event.query.filter(Event.status == 'approved').count()
+        completed_events = Event.query.filter(Event.end_datetime < now).count()
+        
+        return jsonify({
+            'total_events': total_events,
+            'upcoming_events': upcoming_events,
+            'online_events': online_events,
+            'offline_events': offline_events,
+            'pending_events': pending_events,
+            'completed_events': completed_events
+        })
+    except Exception as e:
+        app.logger.error(f'Error getting dashboard stats: {str(e)}')
+        return jsonify({
+            'total_events': 0,
+            'upcoming_events': 0,
+            'online_events': 0,
+            'offline_events': 0,
+            'pending_events': 0,
+            'completed_events': 0
+        })
 
 @app.route('/api/dashboard/category_data')
 @login_required
 def api_category_data():
     from flask import jsonify
-    return jsonify([])
+    try:
+        # Get category distribution from database
+        categories_data = []
+        categories = EventCategory.query.all()
+        
+        for category in categories:
+            event_count = len([event for event in category.events])
+            categories_data.append({
+                'name': category.name,
+                'count': event_count
+            })
+        
+        # Sort by count descending
+        categories_data.sort(key=lambda x: x['count'], reverse=True)
+        
+        return jsonify(categories_data)
+    except Exception as e:
+        app.logger.error(f'Error getting category data: {str(e)}')
+        return jsonify([])
 
 @app.route('/api/dashboard/monthly_data')
 @login_required  
 def api_monthly_data():
     from flask import jsonify
-    # Return data in the format expected by the chart
-    return jsonify({
-        'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        'data': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    })
+    from datetime import datetime
+    import calendar
+    
+    try:
+        # Get current year for monthly breakdown
+        current_year = datetime.now().year
+        
+        # Initialize monthly data
+        monthly_counts = [0] * 12
+        
+        # Get events from current year
+        events = Event.query.filter(
+            Event.start_datetime >= datetime(current_year, 1, 1),
+            Event.start_datetime < datetime(current_year + 1, 1, 1)
+        ).all()
+        
+        # Count events by month
+        for event in events:
+            if event.start_datetime:
+                month_index = event.start_datetime.month - 1  # 0-based index
+                monthly_counts[month_index] += 1
+        
+        return jsonify({
+            'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            'data': monthly_counts
+        })
+    except Exception as e:
+        app.logger.error(f'Error getting monthly data: {str(e)}')
+        return jsonify({
+            'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            'data': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        })
 
 @app.route('/api/dashboard/requester_data')
 @login_required
 def api_requester_data():
     from flask import jsonify
-    return jsonify([])
+    try:
+        # Get events by requester (user who created them)
+        requester_data = []
+        
+        # Query events grouped by user
+        from sqlalchemy import func
+        results = db.session.query(
+            User.email,
+            func.count(Event.id).label('event_count')
+        ).join(Event, User.id == Event.user_id).group_by(User.id, User.email).all()
+        
+        for email, count in results:
+            requester_data.append({
+                'name': email,
+                'count': count
+            })
+        
+        # Sort by count descending
+        requester_data.sort(key=lambda x: x['count'], reverse=True)
+        
+        return jsonify(requester_data)
+    except Exception as e:
+        app.logger.error(f'Error getting requester data: {str(e)}')
+        return jsonify([])
 
 @app.route('/api/settings/theme', methods=['POST'])
 def api_update_theme():
